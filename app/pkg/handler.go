@@ -2,7 +2,6 @@ package pkg
 
 import (
 	"errors"
-	"fmt"
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
 )
 
@@ -26,11 +25,8 @@ func (h Echo) Handle(args []resp.Value) ([]byte, error) {
 	if len(args) < 2 {
 		return nil, ErrInvalidCmd
 	}
-	v, ok := args[1].Val.(string)
-	if !ok {
-		return nil, fmt.Errorf("expecte string argument")
-	}
-	return resp.Encode([]byte(v)), nil
+	v := args[1].Val.(string)
+	return resp.Encode(v), nil
 }
 
 type Set struct {
