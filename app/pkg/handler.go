@@ -59,7 +59,7 @@ func NewGet(s *Store) *Set {
 }
 func (h *Get) Handle(args []resp.Value) ([]byte, error) {
 	if len(args) < 2 {
-		return nil, ErrInvalidCmd
+		return nil, fmt.Errorf("%v, %w", args, ErrInvalidCmd)
 	}
 	k := args[1].Val.(string)
 	var r []byte

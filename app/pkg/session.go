@@ -42,7 +42,7 @@ func (s *Session) worker() {
 	for in := range s.inC {
 		err := s.handle(in)
 		if err != nil {
-			log.Println("handle in", err.Error())
+			log.Println("handle input", in, err.Error())
 			continue
 		}
 	}
