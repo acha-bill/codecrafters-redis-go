@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
@@ -44,6 +45,8 @@ func handleConnection(conn net.Conn) {
 			os.Exit(1)
 		}
 
+		buf = bytes.TrimSpace(buf)
+
 		var val resp.Value
 		_, err = resp.Decode(buf, &val)
 		if err != nil {
@@ -77,10 +80,7 @@ func handleInput(in resp.Value, conn net.Conn) error {
 	case "ECHO":
 		var v string
 		if len(arr) > 0 {
-			vv := arr[1].Val.(resp.Value)
-			if vv.Type == resp.BulkString {
-				v = vv.Val.(string)
-			}
+			v = arr[1].Val.(string)
 		}
 		return handleEcho(v, conn)
 	}
