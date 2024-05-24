@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -32,7 +33,7 @@ func main() {
 
 func handleConnection(conn net.Conn) {
 	for {
-		buf := make([]byte, 128)
+		buf := make([]byte, 64)
 		_, err := conn.Read(buf)
 		if errors.Is(err, io.EOF) {
 			conn.Close()
@@ -53,6 +54,7 @@ func handleConnection(conn net.Conn) {
 		err = handleInput(val, conn)
 		if err != nil {
 			fmt.Println("handle cmd:", err.Error())
+			os.Exit(1)
 		}
 	}
 }
@@ -68,14 +70,17 @@ func handleInput(in resp.Value, conn net.Conn) error {
 	if arr[0].Type != resp.BulkString {
 		return fmt.Errorf("bulk string expected")
 	}
-	cmd := arr[0].Val.(string)
+	cmd := strings.ToUpper(arr[0].Val.(string))
 	switch cmd {
 	case "PING":
 		return handlePing(conn)
 	case "ECHO":
 		var v string
 		if len(arr) > 0 {
-			v = arr[1].Val.(string)
+			vv := arr[1].Val.(resp.Value)
+			if vv.Type == resp.BulkString {
+				v = vv.Val.(string)
+			}
 		}
 		return handleEcho(v, conn)
 	}

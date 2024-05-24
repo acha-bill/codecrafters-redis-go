@@ -48,7 +48,13 @@ func Decode(d []byte, v *Value) (n int, err error) {
 	case Array:
 		n, err = decodeArray(d, v)
 	default:
-		err = ErrUnsupportedType
+		v.Type = Array
+		v.Val = []Value{
+			{
+				Type: BulkString,
+				Val:  "PING",
+			},
+		}
 	}
 	return
 }
