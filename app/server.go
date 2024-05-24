@@ -25,13 +25,10 @@ func main() {
 	defer conn.Close()
 
 	for {
-		d, err := io.ReadAll(conn)
+		_, err := io.ReadAll(conn)
 		if err != nil {
 			fmt.Println("read from connection: ", err.Error())
 			os.Exit(1)
-		}
-		if len(d) == 0 {
-			continue
 		}
 
 		_, err = conn.Write([]byte(("+PONG\\r\\n")))
