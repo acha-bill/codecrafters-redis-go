@@ -20,11 +20,18 @@ var (
 	ErrUnsupportedType   = errors.New("unsupported type")
 	ErrInvalidTerminator = errors.New("invalid terminator")
 	ErrMaxBulkLen        = errors.New("max bulk length")
+
+	Nil = []byte("$-1\r\n")
+	Ok  = []byte("+OK\r\n")
 )
 
 type Value struct {
 	Type TYPE
 	Val  any
+}
+
+func EncodeSimple(s string) []byte {
+	return []byte(fmt.Sprintf("+%s%s", s, crlf))
 }
 
 func Encode(v any) []byte {

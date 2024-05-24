@@ -1,13 +1,11 @@
 package main
 
 import (
-	"errors"
 	"fmt"
-	"github.com/codecrafters-io/redis-starter-go/app/resp"
-	"io"
+	"github.com/codecrafters-io/redis-starter-go/app/pkg"
+	"log"
 	"net"
 	"os"
-	"strings"
 )
 
 func main() {
@@ -20,81 +18,21 @@ func main() {
 		os.Exit(1)
 	}
 
+	store := pkg.NewStore()
+	handlers := map[string]pkg.Handler{
+		"PING": pkg.Ping{},
+		"ECHO": pkg.Echo{},
+		"SET":  pkg.NewSet(store),
+		"GET":  pkg.NewGet(store),
+	}
+
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			fmt.Println("Error accepting connection: ", err.Error())
-			os.Exit(1)
+			log.Fatal("Error accepting connection: ", err.Error())
 		}
 
-		go handleConnection(conn)
+		session := pkg.NewSession(conn, handlers)
+		go session.Start()
 	}
-}
-
-func handleConnection(conn net.Conn) {
-	for {
-		buf := make([]byte, 64)
-		_, err := conn.Read(buf)
-		if errors.Is(err, io.EOF) {
-			conn.Close()
-			return
-		}
-		if err != nil {
-			fmt.Println("read from connection: ", err.Error())
-			os.Exit(1)
-		}
-
-		//buf = bytes.TrimSpace(buf)
-		fmt.Println("received: ", string(buf))
-		var val resp.Value
-		_, err = resp.Decode(buf, &val)
-		if err != nil {
-			fmt.Println("decode input ", err.Error())
-			os.Exit(1)
-		}
-
-		err = handleInput(val, conn)
-		if err != nil {
-			fmt.Println("handle cmd:", err.Error())
-			os.Exit(1)
-		}
-	}
-}
-
-func handleInput(in resp.Value, conn net.Conn) error {
-	if in.Type != resp.Array {
-		return fmt.Errorf("only array allowed")
-	}
-	arr := in.Val.([]resp.Value)
-	if len(arr) == 0 {
-		return fmt.Errorf("command is missing")
-	}
-	if arr[0].Type != resp.BulkString {
-		return fmt.Errorf("bulk string expected")
-	}
-	cmd := strings.ToUpper(arr[0].Val.(string))
-	switch cmd {
-	case "PING":
-		return handlePing(conn)
-	case "ECHO":
-		var v string
-		if len(arr) > 0 {
-			v = arr[1].Val.(string)
-		}
-		return handleEcho(v, conn)
-	}
-
-	return fmt.Errorf("invalid command: %s", cmd)
-}
-
-func handleEcho(v string, conn net.Conn) error {
-	d := resp.Encode(v)
-	_, err := conn.Write(d)
-	return err
-}
-
-func handlePing(conn net.Conn) error {
-	d := resp.Encode("PONG")
-	_, err := conn.Write(d)
-	return err
 }
