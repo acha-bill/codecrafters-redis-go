@@ -64,6 +64,7 @@ func (s *Session) handle(in resp.Value) error {
 	if !ok {
 		return fmt.Errorf("handler for cmd %s not found", cmd)
 	}
+	log.Printf("handling %s cmd with args %+v", cmd, args)
 	r, err := h.Handle(args)
 	if err != nil {
 		return err
