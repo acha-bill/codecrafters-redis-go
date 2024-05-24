@@ -30,7 +30,7 @@ func (h Echo) Handle(args []resp.Value) ([]byte, error) {
 	if !ok {
 		return nil, fmt.Errorf("expecte string argument")
 	}
-	return []byte(v), nil
+	return resp.Encode([]byte(v)), nil
 }
 
 type Set struct {
