@@ -33,13 +33,13 @@ func handleConnection(err error, conn net.Conn) {
 	for {
 		buf := make([]byte, 1024)
 		_, err = conn.Read(buf)
-		if err != nil && !errors.Is(err, io.EOF) {
-			fmt.Println("read from connection: ", err.Error())
-			os.Exit(1)
-		}
 		if errors.Is(err, io.EOF) {
 			conn.Close()
 			return
+		}
+		if err != nil {
+			fmt.Println("read from connection: ", err.Error())
+			os.Exit(1)
 		}
 
 		_, err = conn.Write([]byte(("+PONG\r\n")))
