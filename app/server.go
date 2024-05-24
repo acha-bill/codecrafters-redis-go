@@ -23,20 +23,23 @@ func main() {
 			os.Exit(1)
 		}
 
-		for {
-			buf := make([]byte, 1024)
-			_, err = conn.Read(buf)
-			if err != nil {
-				fmt.Println("read from connection: ", err.Error())
-				os.Exit(1)
-			}
+		go handleConnection(err, conn)
+	}
+}
 
-			_, err = conn.Write([]byte(("+PONG\r\n")))
-			if err != nil {
-				fmt.Println("write to connection: ", err.Error())
-				os.Exit(1)
-			}
+func handleConnection(err error, conn net.Conn) {
+	for {
+		buf := make([]byte, 1024)
+		_, err = conn.Read(buf)
+		if err != nil {
+			fmt.Println("read from connection: ", err.Error())
+			os.Exit(1)
 		}
-		conn.Close()
+
+		_, err = conn.Write([]byte(("+PONG\r\n")))
+		if err != nil {
+			fmt.Println("write to connection: ", err.Error())
+			os.Exit(1)
+		}
 	}
 }
