@@ -149,7 +149,7 @@ func readLength(d []byte) (int, int, error) {
 
 func readNewLine(d []byte) (int, error) {
 	if bytes.Compare(d[0:4], crlf) != 0 {
-		return 0, fmt.Errorf("%v, %v, %w", d[0:4], crlf, ErrInvalidTerminator)
+		return 0, fmt.Errorf("%v, %v, %w", d, crlf, ErrInvalidTerminator)
 	}
 	return 4, nil
 }
