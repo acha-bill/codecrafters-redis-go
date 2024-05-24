@@ -37,6 +37,10 @@ func handleConnection(err error, conn net.Conn) {
 			fmt.Println("read from connection: ", err.Error())
 			os.Exit(1)
 		}
+		if errors.Is(err, io.EOF) {
+			conn.Close()
+			return
+		}
 
 		_, err = conn.Write([]byte(("+PONG\r\n")))
 		if err != nil {
