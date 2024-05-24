@@ -44,7 +44,7 @@ func NewSet(s *Store) *Set {
 }
 func (h *Set) parse(args []resp.Value) (*setOpts, error) {
 	var o setOpts
-	for i := 3; i < len(args); {
+	for i := 3; i < len(args); i++ {
 		switch strings.ToUpper(args[i].Val.(string)) {
 		case "PX":
 			if i+1 < len(args) {
@@ -53,6 +53,7 @@ func (h *Set) parse(args []resp.Value) (*setOpts, error) {
 					return nil, err
 				}
 				o.px = time.Duration(v) * time.Millisecond
+				i++
 			}
 		}
 	}
