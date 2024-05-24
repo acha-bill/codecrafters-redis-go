@@ -3,6 +3,9 @@ package pkg
 import (
 	"errors"
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
+	"strconv"
+	"strings"
+	"time"
 )
 
 var (
@@ -32,9 +35,28 @@ func (h Echo) Handle(args []resp.Value) ([]byte, error) {
 type Set struct {
 	store *Store
 }
+type setOpts struct {
+	px time.Duration
+}
 
 func NewSet(s *Store) *Set {
 	return &Set{store: s}
+}
+func (h *Set) parse(args []resp.Value) (*setOpts, error) {
+	var o setOpts
+	for i := 3; i < len(args); {
+		switch strings.ToUpper(args[i].Val.(string)) {
+		case "PX":
+			if i+1 < len(args) {
+				v, err := strconv.Atoi(args[i+1].Val.(string))
+				if err != nil {
+					return nil, err
+				}
+				o.px = time.Duration(v) * time.Millisecond
+			}
+		}
+	}
+	return &o, nil
 }
 
 func (h *Set) Handle(args []resp.Value) ([]byte, error) {
@@ -42,7 +64,12 @@ func (h *Set) Handle(args []resp.Value) ([]byte, error) {
 		return nil, ErrInvalidCmd
 	}
 	k, v := args[1].Val.(string), args[2].Val.(string)
-	h.store.Set(k, v)
+	o, err := h.parse(args)
+	if err != nil {
+		return nil, err
+	}
+
+	h.store.Set(k, v, o.px)
 	return resp.Ok, nil
 }
 

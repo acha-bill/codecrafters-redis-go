@@ -1,14 +1,22 @@
 package pkg
 
-import "sync"
+import (
+	"sync"
+	"time"
+)
 
+type StoreVal struct {
+	val       string
+	ex        time.Time
+	canExpire bool
+}
 type Store struct {
-	store map[string]string
+	store map[string]*StoreVal
 	mu    sync.RWMutex
 }
 
 func NewStore() *Store {
-	return &Store{store: make(map[string]string)}
+	return &Store{store: make(map[string]*StoreVal)}
 }
 
 func (s *Store) Get(k string) (string, bool) {
@@ -16,12 +24,22 @@ func (s *Store) Get(k string) (string, bool) {
 	defer s.mu.RUnlock()
 
 	v, ok := s.store[k]
-	return v, ok
+	if !ok {
+		return "", false
+	}
+	if v.canExpire && time.Now().After(v.ex) {
+		return "", false
+	}
+	return v.val, true
 }
 
-func (s *Store) Set(k, v string) {
+func (s *Store) Set(k string, v string, px time.Duration) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.store[k] = v
+	s.store[k] = &StoreVal{
+		val:       v,
+		ex:        time.Now().Add(px),
+		canExpire: px > 0,
+	}
 }
