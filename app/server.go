@@ -46,7 +46,6 @@ func handleConnection(conn net.Conn) {
 		}
 
 		buf = bytes.TrimSpace(buf)
-
 		var val resp.Value
 		_, err = resp.Decode(buf, &val)
 		if err != nil {
