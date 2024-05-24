@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
+	"log"
 )
 
 var (
@@ -58,8 +59,10 @@ func NewGet(s *Store) *Set {
 	return &Set{store: s}
 }
 func (h *Get) Handle(args []resp.Value) ([]byte, error) {
+	log.Println(len(args))
+	log.Println(args[0])
 	if len(args) < 2 {
-		return nil, fmt.Errorf("%v, %w", args, ErrInvalidCmd)
+		return nil, fmt.Errorf("%+v, %w", args, ErrInvalidCmd)
 	}
 	k := args[1].Val.(string)
 	var r []byte
