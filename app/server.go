@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"io"
 	"net"
 	"os"
@@ -25,14 +26,14 @@ func main() {
 			os.Exit(1)
 		}
 
-		go handleConnection(err, conn)
+		go handleConnection(conn)
 	}
 }
 
-func handleConnection(err error, conn net.Conn) {
+func handleConnection(conn net.Conn) {
 	for {
-		buf := make([]byte, 1024)
-		_, err = conn.Read(buf)
+		buf := make([]byte, 128)
+		_, err := conn.Read(buf)
 		if errors.Is(err, io.EOF) {
 			conn.Close()
 			return
@@ -42,10 +43,54 @@ func handleConnection(err error, conn net.Conn) {
 			os.Exit(1)
 		}
 
-		_, err = conn.Write([]byte(("+PONG\r\n")))
+		var val resp.Value
+		_, err = resp.Decode(buf, &val)
 		if err != nil {
-			fmt.Println("write to connection: ", err.Error())
+			fmt.Println("decode input ", err.Error())
 			os.Exit(1)
 		}
+
+		err = handleInput(val, conn)
+		if err != nil {
+			fmt.Println("handle cmd:", err.Error())
+		}
 	}
+}
+
+func handleInput(in resp.Value, conn net.Conn) error {
+	if in.Type != resp.Array {
+		return fmt.Errorf("only array allowed")
+	}
+	arr := in.Val.([]resp.Value)
+	if len(arr) == 0 {
+		return fmt.Errorf("command is missing")
+	}
+	if arr[0].Type != resp.BulkString {
+		return fmt.Errorf("bulk string expected")
+	}
+	cmd := arr[0].Val.(string)
+	switch cmd {
+	case "PING":
+		return handlePing(conn)
+	case "ECHO":
+		var v string
+		if len(arr) > 0 {
+			v = arr[1].Val.(string)
+		}
+		return handleEcho(v, conn)
+	}
+
+	return fmt.Errorf("invalid command: %s", cmd)
+}
+
+func handleEcho(v string, conn net.Conn) error {
+	d := resp.Encode(v)
+	_, err := conn.Write(d)
+	return err
+}
+
+func handlePing(conn net.Conn) error {
+	d := resp.Encode("PONG")
+	_, err := conn.Write(d)
+	return err
 }
