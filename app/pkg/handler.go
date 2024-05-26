@@ -120,11 +120,22 @@ func (h Info) parse(args []resp.Value) (infoOpts, error) {
 
 	return opts, nil
 }
+
 func (h Info) Handle(args []resp.Value) ([]byte, error) {
 	_, err := h.parse(args)
 	if err != nil {
 		return nil, err
 	}
 
-	return resp.Encode(fmt.Sprintf("role:%s", h.repl.Role)), nil
+	m := map[string]any{
+		"role":               h.repl.Role,
+		"master_replid":      "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb",
+		"master_repl_offset": 0,
+	}
+	r := ""
+	for k, v := range m {
+		r += fmt.Sprintf("%s:%v\r\n", k, v)
+	}
+
+	return resp.Encode(r), nil
 }
