@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"errors"
+	"fmt"
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"strconv"
 	"strings"
@@ -95,9 +96,15 @@ func (h *Get) Handle(args []resp.Value) ([]byte, error) {
 	return r, nil
 }
 
-type Info struct{}
+type Info struct {
+	repl Replication
+}
 type infoOpts struct {
 	replication bool
+}
+
+func NewInfo(repl Replication) Info {
+	return Info{repl: repl}
 }
 
 func (h Info) parse(args []resp.Value) (infoOpts, error) {
@@ -119,5 +126,5 @@ func (h Info) Handle(args []resp.Value) ([]byte, error) {
 		return nil, err
 	}
 
-	return resp.Encode("role:master"), nil
+	return resp.Encode(fmt.Sprintf("role:%s", h.repl.Role)), nil
 }

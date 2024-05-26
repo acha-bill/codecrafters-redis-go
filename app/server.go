@@ -10,13 +10,17 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/app/pkg"
 )
 
-var port int
+var (
+	port      int
+	replicaOf string
+)
 
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
 
 	flag.IntVar(&port, "port", 6379, "port number")
+	flag.StringVar(&replicaOf, "replicaof", "", "the master to follow")
 	flag.Parse()
 
 	l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
@@ -26,12 +30,20 @@ func main() {
 	}
 
 	store := pkg.NewStore()
+	role := "master"
+	if replicaOf != "" {
+		role = "slave"
+	}
+	repl := pkg.Replication{
+		Role:      role,
+		ReplicaOf: replicaOf,
+	}
 	handlers := map[string]pkg.Handler{
 		"PING": pkg.Ping{},
 		"ECHO": pkg.Echo{},
 		"SET":  pkg.NewSet(store),
 		"GET":  pkg.NewGet(store),
-		"INFO": pkg.Info{},
+		"INFO": pkg.NewInfo(repl),
 	}
 
 	for {
