@@ -97,13 +97,13 @@ func (h *Get) Handle(args []resp.Value) ([]byte, error) {
 }
 
 type Info struct {
-	repl Replication
+	repl *Replica
 }
 type infoOpts struct {
 	replication bool
 }
 
-func NewInfo(repl Replication) Info {
+func NewInfo(repl *Replica) Info {
 	return Info{repl: repl}
 }
 

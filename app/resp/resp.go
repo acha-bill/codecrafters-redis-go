@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
 )
 
@@ -35,13 +36,36 @@ func EncodeSimple(s string) []byte {
 }
 
 func Encode(v any) []byte {
-	switch v.(type) {
-	case string:
-		s := v.(string)
-		r := fmt.Sprintf("%s%d%s%s%s", string(BulkString), len(s), crlf, s, crlf)
-		return []byte(r)
+	t := reflect.TypeOf(v)
+	var res []byte
+	switch t.Kind() {
+	case reflect.String:
+		res = encodeBulkString(v)
+	case reflect.Slice, reflect.Array:
+		res = encodeArray(v)
+	default:
 	}
-	return nil
+	return res
+}
+
+func encodeBulkString(v any) []byte {
+	s := v.(string)
+	r := fmt.Sprintf("%s%d%s%s%s", string(BulkString), len(s), crlf, s, crlf)
+	return []byte(r)
+}
+
+func encodeArray(v any) []byte {
+	s := reflect.ValueOf(v)
+	l := s.Len()
+	ret := make([][]byte, l)
+	for i := 0; i < l; i++ {
+		ret[i] = Encode(s.Index(i).Interface())
+	}
+	r := []byte(fmt.Sprintf("%s%d%s", string(Array), l, crlf))
+	for i := range ret {
+		r = append(r, ret[i]...)
+	}
+	return r
 }
 
 func Decode(d []byte, v *Value) (n int, err error) {

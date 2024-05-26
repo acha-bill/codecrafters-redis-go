@@ -30,20 +30,24 @@ func main() {
 	}
 
 	store := pkg.NewStore()
-	role := "master"
+	role := pkg.MasterReplica
 	if replicaOf != "" {
-		role = "slave"
+		role = pkg.SlaveReplica
 	}
-	repl := pkg.Replication{
-		Role:      role,
-		ReplicaOf: replicaOf,
-	}
+	repl := pkg.NewReplica(role, replicaOf)
 	handlers := map[string]pkg.Handler{
 		"PING": pkg.Ping{},
 		"ECHO": pkg.Echo{},
 		"SET":  pkg.NewSet(store),
 		"GET":  pkg.NewGet(store),
 		"INFO": pkg.NewInfo(repl),
+	}
+
+	if role == pkg.SlaveReplica {
+		err = repl.Handshake1()
+		if err != nil {
+			log.Fatal("handshake with master")
+		}
 	}
 
 	for {
