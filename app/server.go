@@ -31,6 +31,7 @@ func main() {
 		"ECHO": pkg.Echo{},
 		"SET":  pkg.NewSet(store),
 		"GET":  pkg.NewGet(store),
+		"INFO": pkg.Info{},
 	}
 
 	for {

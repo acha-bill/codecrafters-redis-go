@@ -94,3 +94,30 @@ func (h *Get) Handle(args []resp.Value) ([]byte, error) {
 	}
 	return r, nil
 }
+
+type Info struct{}
+type infoOpts struct {
+	replication bool
+}
+
+func (h Info) parse(args []resp.Value) (infoOpts, error) {
+	var opts infoOpts
+	if len(args) < 2 {
+		return opts, nil
+	}
+	sec := strings.ToUpper(args[1].Val.(string))
+	switch sec {
+	case "REPLICATION":
+		opts.replication = true
+	}
+
+	return opts, nil
+}
+func (h Info) Handle(args []resp.Value) ([]byte, error) {
+	_, err := h.parse(args)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Encode("role:master"), nil
+}
