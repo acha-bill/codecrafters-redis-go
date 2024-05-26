@@ -36,4 +36,4 @@ go.work
 .env
 
 .vscode
-app
+app/app
