@@ -65,11 +65,18 @@ func (s *Session) handle(in resp.Value) error {
 		return fmt.Errorf("handler for cmd %s not found", cmd)
 	}
 	log.Printf("handling %s cmd with args %+v", cmd, args)
-	r, err := h.Handle(args)
+
+	res := make(chan []byte)
+	defer close(res)
+	go func() {
+		for r := range res {
+			s.outC <- r
+		}
+	}()
+	err := h.Handle(args, res)
 	if err != nil {
 		return err
 	}
-	s.outC <- r
 	return nil
 }
 

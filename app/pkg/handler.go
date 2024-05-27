@@ -14,23 +14,25 @@ var (
 )
 
 type Handler interface {
-	Handle(args []resp.Value) ([]byte, error)
+	Handle(args []resp.Value, res chan<- []byte) error
 }
 
 type Ping struct{}
 
-func (h Ping) Handle(_ []resp.Value) ([]byte, error) {
-	return resp.Encode("PONG"), nil
+func (h Ping) Handle(args []resp.Value, res chan<- []byte) error {
+	res <- resp.Encode("PONG")
+	return nil
 }
 
 type Echo struct{}
 
-func (h Echo) Handle(args []resp.Value) ([]byte, error) {
+func (h Echo) Handle(args []resp.Value, res chan<- []byte) error {
 	if len(args) < 2 {
-		return nil, ErrInvalidCmd
+		return ErrInvalidCmd
 	}
 	v := args[1].Val.(string)
-	return resp.Encode(v), nil
+	res <- resp.Encode(v)
+	return nil
 }
 
 type Set struct {
@@ -61,18 +63,18 @@ func (h *Set) parse(args []resp.Value) (*setOpts, error) {
 	return &o, nil
 }
 
-func (h *Set) Handle(args []resp.Value) ([]byte, error) {
+func (h *Set) Handle(args []resp.Value, res chan<- []byte) error {
 	if len(args) < 3 {
-		return nil, ErrInvalidCmd
+		return ErrInvalidCmd
 	}
 	k, v := args[1].Val.(string), args[2].Val.(string)
 	o, err := h.parse(args)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
 	h.store.Set(k, v, o.px)
-	return resp.Ok, nil
+	res <- resp.Ok
+	return nil
 }
 
 type Get struct {
@@ -82,9 +84,9 @@ type Get struct {
 func NewGet(s *Store) *Get {
 	return &Get{store: s}
 }
-func (h *Get) Handle(args []resp.Value) ([]byte, error) {
+func (h *Get) Handle(args []resp.Value, res chan<- []byte) error {
 	if len(args) < 2 {
-		return nil, ErrInvalidCmd
+		return ErrInvalidCmd
 	}
 	k := args[1].Val.(string)
 	var r []byte
@@ -93,7 +95,8 @@ func (h *Get) Handle(args []resp.Value) ([]byte, error) {
 	} else {
 		r = resp.Nil
 	}
-	return r, nil
+	res <- r
+	return nil
 }
 
 type Info struct {
@@ -121,10 +124,10 @@ func (h Info) parse(args []resp.Value) (infoOpts, error) {
 	return opts, nil
 }
 
-func (h Info) Handle(args []resp.Value) ([]byte, error) {
+func (h Info) Handle(args []resp.Value, res chan<- []byte) error {
 	_, err := h.parse(args)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	m := map[string]any{
@@ -136,8 +139,8 @@ func (h Info) Handle(args []resp.Value) ([]byte, error) {
 	for k, v := range m {
 		r += fmt.Sprintf("%s:%v\r\n", k, v)
 	}
-
-	return resp.Encode(r), nil
+	res <- resp.Encode(r)
+	return nil
 }
 
 type ReplicaConfig struct{}
@@ -161,12 +164,13 @@ func (h ReplicaConfig) parse(args []resp.Value) (replicaConfigOpts, error) {
 
 	return opts, nil
 }
-func (h ReplicaConfig) Handle(args []resp.Value) ([]byte, error) {
+func (h ReplicaConfig) Handle(args []resp.Value, res chan<- []byte) error {
 	_, err := h.parse(args)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return resp.Ok, nil
+	res <- resp.Ok
+	return nil
 }
 
 type Psync struct {
@@ -177,9 +181,14 @@ func NewPsync(repl *Replica) Psync {
 	return Psync{repl: repl}
 }
 
-func (h Psync) Handle(args []resp.Value) ([]byte, error) {
+func (h Psync) Handle(args []resp.Value, res chan<- []byte) error {
 	if len(args) < 3 {
-		return nil, ErrInvalidCmd
+		return ErrInvalidCmd
 	}
-	return resp.EncodeSimple(fmt.Sprintf("FULLRESYNC %s 0", h.repl.ID)), nil
+	res <- resp.EncodeSimple(fmt.Sprintf("FULLRESYNC %s 0", h.repl.ID))
+	rdb := resp.EncodeRDB()
+	fmt.Println("rdb: ", rdb)
+	fmt.Println("rdb string: ", string(rdb))
+	res <- rdb
+	return nil
 }
