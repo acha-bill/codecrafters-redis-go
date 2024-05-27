@@ -38,11 +38,12 @@ func main() {
 	}
 	repl := pkg.NewReplica(role, replicaOf, config)
 	handlers := map[string]pkg.Handler{
-		"PING": pkg.Ping{},
-		"ECHO": pkg.Echo{},
-		"SET":  pkg.NewSet(store),
-		"GET":  pkg.NewGet(store),
-		"INFO": pkg.NewInfo(repl),
+		"PING":     pkg.Ping{},
+		"ECHO":     pkg.Echo{},
+		"SET":      pkg.NewSet(store),
+		"GET":      pkg.NewGet(store),
+		"INFO":     pkg.NewInfo(repl),
+		"REPLCONF": pkg.ReplicaConfig{},
 	}
 
 	if role == pkg.SlaveReplica {

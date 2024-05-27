@@ -139,3 +139,32 @@ func (h Info) Handle(args []resp.Value) ([]byte, error) {
 
 	return resp.Encode(r), nil
 }
+
+type ReplicaConfig struct{}
+type replicaConfigOpts struct {
+	listeningPort int
+	capa          string
+}
+
+func (h ReplicaConfig) parse(args []resp.Value) (replicaConfigOpts, error) {
+	var opts replicaConfigOpts
+	if len(args) < 3 {
+		return opts, nil
+	}
+	sec := strings.ToLower(args[1].Val.(string))
+	switch sec {
+	case "listening-port":
+		opts.listeningPort = args[2].Val.(int)
+	case "capa":
+		opts.capa = args[2].Val.(string)
+	}
+
+	return opts, nil
+}
+func (h ReplicaConfig) Handle(args []resp.Value) ([]byte, error) {
+	_, err := h.parse(args)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Ok, nil
+}
