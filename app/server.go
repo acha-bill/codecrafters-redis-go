@@ -49,7 +49,7 @@ func main() {
 		go func() {
 			err = repl.Handshake()
 			if err != nil {
-				log.Println("handshake with master: ", err.Error())
+				fmt.Println("handshake with master: ", err.Error())
 			}
 		}()
 	}

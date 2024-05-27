@@ -55,7 +55,6 @@ func (r *Replica) Handshake() error {
 	}
 
 	ch := make(chan []byte, 1)
-	defer close(ch)
 	go func() {
 		for {
 			b := make([]byte, 1024)
