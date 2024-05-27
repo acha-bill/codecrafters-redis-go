@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -70,7 +71,7 @@ func (r *Replica) Handshake() error {
 		return fmt.Errorf("write ping: %w", err)
 	}
 	res := <-ch
-	if string(res) != string(resp.Pong) {
+	if !bytes.Equal(res[:len(resp.Pong)], resp.Pong) {
 		return fmt.Errorf("expected PONG")
 	}
 
@@ -80,7 +81,7 @@ func (r *Replica) Handshake() error {
 	}
 
 	res = <-ch
-	if string(res) != string(resp.Ok) {
+	if !bytes.Equal(res[:len(resp.Ok)], resp.Ok) {
 		return fmt.Errorf("expected ok. got %s", string(res))
 	}
 
@@ -92,7 +93,7 @@ func (r *Replica) Handshake() error {
 	fmt.Println("wait for ok")
 	res = <-ch
 	fmt.Println("received ", string(res))
-	if string(res) != string(resp.Ok) {
+	if !bytes.Equal(res[:len(resp.Ok)], resp.Ok) {
 		return fmt.Errorf("expected ok. got %s", string(res))
 	}
 	return nil
