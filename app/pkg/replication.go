@@ -25,22 +25,34 @@ var (
 )
 
 type Replica struct {
+	sId   int64
+	capa  map[string]string
+	port  int
+	conf  bool
+	psync bool
+	ready bool
+	conn  net.Conn
+}
+
+type Replication struct {
 	Role   ReplicaType
 	Of     string
 	ID     string
 	config Config
+	slaves map[int64]*Replica
 }
 
-func NewReplica(role ReplicaType, of string, config Config) *Replica {
-	return &Replica{
+func NewReplica(role ReplicaType, of string, config Config) *Replication {
+	return &Replication{
 		Role:   role,
 		Of:     of,
 		config: config,
 		ID:     "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb",
+		slaves: make(map[int64]*Replica),
 	}
 }
 
-func (r *Replica) Handshake() error {
+func (r *Replication) Handshake() error {
 	master := strings.Split(r.Of, " ")
 	if len(master) < 2 {
 		return ErrInvalidMaster

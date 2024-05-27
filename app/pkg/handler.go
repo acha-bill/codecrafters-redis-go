@@ -14,19 +14,19 @@ var (
 )
 
 type Handler interface {
-	Handle(args []resp.Value, res chan<- []byte) error
+	Handle(sId int64, args []resp.Value, res chan<- []byte) error
 }
 
 type Ping struct{}
 
-func (h Ping) Handle(args []resp.Value, res chan<- []byte) error {
+func (h Ping) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 	res <- resp.Encode("PONG")
 	return nil
 }
 
 type Echo struct{}
 
-func (h Echo) Handle(args []resp.Value, res chan<- []byte) error {
+func (h Echo) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 	if len(args) < 2 {
 		return ErrInvalidCmd
 	}
@@ -63,7 +63,7 @@ func (h *Set) parse(args []resp.Value) (*setOpts, error) {
 	return &o, nil
 }
 
-func (h *Set) Handle(args []resp.Value, res chan<- []byte) error {
+func (h *Set) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 	if len(args) < 3 {
 		return ErrInvalidCmd
 	}
@@ -84,7 +84,7 @@ type Get struct {
 func NewGet(s *Store) *Get {
 	return &Get{store: s}
 }
-func (h *Get) Handle(args []resp.Value, res chan<- []byte) error {
+func (h *Get) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 	if len(args) < 2 {
 		return ErrInvalidCmd
 	}
@@ -100,13 +100,13 @@ func (h *Get) Handle(args []resp.Value, res chan<- []byte) error {
 }
 
 type Info struct {
-	repl *Replica
+	repl *Replication
 }
 type infoOpts struct {
 	replication bool
 }
 
-func NewInfo(repl *Replica) Info {
+func NewInfo(repl *Replication) Info {
 	return Info{repl: repl}
 }
 
@@ -124,7 +124,7 @@ func (h Info) parse(args []resp.Value) (infoOpts, error) {
 	return opts, nil
 }
 
-func (h Info) Handle(args []resp.Value, res chan<- []byte) error {
+func (h Info) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 	_, err := h.parse(args)
 	if err != nil {
 		return err
@@ -143,10 +143,16 @@ func (h Info) Handle(args []resp.Value, res chan<- []byte) error {
 	return nil
 }
 
-type ReplicaConfig struct{}
+type ReplicaConfig struct {
+	repl *Replication
+}
 type replicaConfigOpts struct {
 	listeningPort int
 	capa          string
+}
+
+func NewReplicaConfig(repl *Replication) ReplicaConfig {
+	return ReplicaConfig{repl: repl}
 }
 
 func (h ReplicaConfig) parse(args []resp.Value) (replicaConfigOpts, error) {
@@ -164,31 +170,47 @@ func (h ReplicaConfig) parse(args []resp.Value) (replicaConfigOpts, error) {
 
 	return opts, nil
 }
-func (h ReplicaConfig) Handle(args []resp.Value, res chan<- []byte) error {
+func (h ReplicaConfig) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 	_, err := h.parse(args)
 	if err != nil {
 		return err
 	}
+
+	s, ok := h.repl.slaves[sId]
+	if !ok {
+		s = &Replica{
+			sId: sId,
+		}
+		h.repl.slaves[sId] = s
+	}
+	s.conf = true
 	res <- resp.Ok
 	return nil
 }
 
 type Psync struct {
-	repl *Replica
+	repl *Replication
 }
 
-func NewPsync(repl *Replica) Psync {
+func NewPsync(repl *Replication) Psync {
 	return Psync{repl: repl}
 }
 
-func (h Psync) Handle(args []resp.Value, res chan<- []byte) error {
+func (h Psync) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 	if len(args) < 3 {
 		return ErrInvalidCmd
 	}
 	res <- resp.EncodeSimple(fmt.Sprintf("FULLRESYNC %s 0", h.repl.ID))
-	rdb := resp.EncodeRDB()
-	fmt.Println("rdb: ", rdb)
-	fmt.Println("rdb string: ", string(rdb))
-	res <- rdb
+	res <- resp.EncodeRDB()
+
+	s, ok := h.repl.slaves[sId]
+	if !ok {
+		s = &Replica{
+			sId: sId,
+		}
+		h.repl.slaves[sId] = s
+	}
+	s.psync = true
+	s.ready = s.conf && s.psync
 	return nil
 }

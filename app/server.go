@@ -62,7 +62,7 @@ func main() {
 			log.Fatal("Error accepting connection: ", err.Error())
 		}
 
-		session := pkg.NewSession(conn, handlers)
+		session := pkg.NewSession(conn, handlers, repl)
 		go session.Start()
 	}
 }

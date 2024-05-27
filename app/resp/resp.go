@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 type TYPE rune
@@ -32,6 +33,20 @@ var (
 type Value struct {
 	Type TYPE
 	Val  any
+}
+
+func DecodeCmd(in Value) (string, []Value, error) {
+	if in.Type != Array {
+		return "", nil, fmt.Errorf("only array allowed")
+	}
+	args := in.Val.([]Value)
+	if len(args) == 0 {
+		return "", nil, fmt.Errorf("command is missing")
+	}
+	if args[0].Type != BulkString {
+		return "", nil, fmt.Errorf("bulk string expected")
+	}
+	return strings.ToUpper(args[0].Val.(string)), args, nil
 }
 
 func EncodeSimple(s string) []byte {

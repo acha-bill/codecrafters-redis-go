@@ -7,7 +7,7 @@ import (
 	"io"
 	"log"
 	"net"
-	"strings"
+	"time"
 )
 
 // Session is the life cycle of a connection
@@ -16,14 +16,18 @@ type Session struct {
 	handlers map[string]Handler
 	inC      chan resp.Value
 	outC     chan []byte
+	repl     *Replication
+	id       int64
 }
 
-func NewSession(conn net.Conn, handlers map[string]Handler) *Session {
+func NewSession(conn net.Conn, handlers map[string]Handler, repl *Replication) *Session {
 	return &Session{
 		conn:     conn,
 		handlers: handlers,
 		inC:      make(chan resp.Value),
 		outC:     make(chan []byte),
+		repl:     repl,
+		id:       time.Now().UnixNano(),
 	}
 }
 func (s *Session) Start() {
@@ -49,17 +53,10 @@ func (s *Session) worker() {
 }
 
 func (s *Session) handle(in resp.Value) error {
-	if in.Type != resp.Array {
-		return fmt.Errorf("only array allowed")
+	cmd, args, err := resp.DecodeCmd(in)
+	if err != nil {
+		return err
 	}
-	args := in.Val.([]resp.Value)
-	if len(args) == 0 {
-		return fmt.Errorf("command is missing")
-	}
-	if args[0].Type != resp.BulkString {
-		return fmt.Errorf("bulk string expected")
-	}
-	cmd := strings.ToUpper(args[0].Val.(string))
 	h, ok := s.handlers[cmd]
 	if !ok {
 		return fmt.Errorf("handler for cmd %s not found", cmd)
@@ -73,10 +70,18 @@ func (s *Session) handle(in resp.Value) error {
 			s.outC <- r
 		}
 	}()
-	err := h.Handle(args, res)
+
+	err = h.Handle(s.id, args, res)
 	if err != nil {
 		return err
 	}
+
+	// setup slave conn
+	sl, ok := s.repl.slaves[s.id]
+	if ok && sl.ready && sl.conn == nil {
+		sl.conn = s.conn
+	}
+
 	return nil
 }
 
@@ -110,5 +115,20 @@ func (s *Session) readLoop() {
 		}
 
 		s.inC <- val
+
+		// propagate write commands to slaves
+		cmd, _, err := resp.DecodeCmd(val)
+		if err != nil {
+			fmt.Println("decode cmd: ", err.Error())
+			continue
+		}
+		if cmd == "SET" {
+			continue
+		}
+		for _, sl := range s.repl.slaves {
+			if sl.conn != nil {
+				sl.conn.Write(buf)
+			}
+		}
 	}
 }
