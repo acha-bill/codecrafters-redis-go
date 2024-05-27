@@ -107,7 +107,7 @@ func (s *Session) readLoop() {
 			continue
 		}
 
-		fmt.Println("read command: ", string(TrimBytes(buf)))
+		fmt.Println("read command: ", string(resp.Encode(TrimBytes(buf))))
 
 		var val resp.Value
 		_, err = resp.Decode(buf, &val)
