@@ -125,9 +125,10 @@ func (s *Session) readLoop() {
 				return
 			}
 
-			fmt.Println("propagating cmd: ", cmd)
+			fmt.Printf("%+v", s.repl.slaves)
 			for _, sl := range s.repl.slaves {
 				if sl.conn != nil {
+					fmt.Println("propagating cmd: ", cmd, buf)
 					sl.conn.Write(buf)
 				}
 			}
