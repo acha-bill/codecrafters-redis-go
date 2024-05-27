@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"strconv"
@@ -54,11 +55,12 @@ func (r *Replica) Handshake() error {
 	}
 
 	ch := make(chan []byte)
+	defer close(ch)
 	go func() {
 		for {
 			b := make([]byte, 1024)
 			_, err := conn.Read(b)
-			if err != nil {
+			if err != nil && !errors.Is(err, io.EOF) {
 				log.Println("read ", err.Error())
 			}
 
