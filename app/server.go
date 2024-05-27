@@ -43,7 +43,7 @@ func main() {
 		"SET":      pkg.NewSet(store),
 		"GET":      pkg.NewGet(store),
 		"INFO":     pkg.NewInfo(repl),
-		"REPLCONF": pkg.ReplicaConfig{},
+		"REPLCONF": pkg.NewReplicaConfig(repl),
 		"PSYNC":    pkg.NewPsync(repl),
 	}
 
