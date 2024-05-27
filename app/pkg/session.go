@@ -114,21 +114,25 @@ func (s *Session) readLoop() {
 			continue
 		}
 
-		s.inC <- val
-
-		// propagate write commands to slaves
-		cmd, _, err := resp.DecodeCmd(val)
-		if err != nil {
-			fmt.Println("decode cmd: ", err.Error())
-			continue
-		}
-		if cmd == "SET" {
-			continue
-		}
-		for _, sl := range s.repl.slaves {
-			if sl.conn != nil {
-				sl.conn.Write(buf)
+		go func() {
+			// propagate write commands to slaves
+			cmd, _, err := resp.DecodeCmd(val)
+			if err != nil {
+				fmt.Println("decode cmd: ", err.Error())
+				return
 			}
-		}
+			if cmd == "SET" {
+				return
+			}
+
+			fmt.Println("propagating cmd: ", cmd)
+			for _, sl := range s.repl.slaves {
+				if sl.conn != nil {
+					sl.conn.Write(buf)
+				}
+			}
+		}()
+
+		s.inC <- val
 	}
 }
