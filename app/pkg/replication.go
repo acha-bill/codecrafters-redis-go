@@ -74,7 +74,7 @@ func (r *Replica) Handshake() error {
 	res := <-ch
 	fmt.Println("received ", string(res))
 	if !bytes.Equal(res, resp.Pong) {
-		return fmt.Errorf("expected %s. got %s", string(resp.Pong), string(res))
+		return fmt.Errorf("expected %v. got %v", resp.Pong, res)
 	}
 
 	fmt.Println("writing REPLCONF 1")
