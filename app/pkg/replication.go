@@ -90,11 +90,15 @@ func (r *Replica) Handshake() error {
 		return fmt.Errorf("write: %w", err)
 	}
 
-	fmt.Println("wait for ok")
 	res = <-ch
-	fmt.Println("received ", string(res))
 	if !bytes.Equal(res[:len(resp.Ok)], resp.Ok) {
 		return fmt.Errorf("expected ok. got %s", string(res))
 	}
+
+	_, err = conn.Write(resp.Encode([]string{"PSYNC", "?", "-1"}))
+	if err != nil {
+		return fmt.Errorf("write: %w", err)
+	}
+	res = <-ch
 	return nil
 }

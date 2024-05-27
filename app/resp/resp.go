@@ -11,8 +11,9 @@ import (
 type TYPE rune
 
 const (
-	BulkString TYPE = '$'
-	Array      TYPE = '*'
+	SimpleString TYPE = '+'
+	BulkString   TYPE = '$'
+	Array        TYPE = '*'
 )
 const MaxBulkLen = 536870912
 
@@ -75,6 +76,8 @@ func Decode(d []byte, v *Value) (n int, err error) {
 	}
 
 	switch TYPE(d[0]) {
+	case SimpleString:
+		n, err = decodeSimple(d, v)
 	case BulkString:
 		n, err = decodeBulk(d, v)
 	case Array:
@@ -89,6 +92,20 @@ func Decode(d []byte, v *Value) (n int, err error) {
 		}
 	}
 	return
+}
+
+func decodeSimple(d []byte, v *Value) (int, error) {
+	if len(d) < 3 {
+		return 0, fmt.Errorf("invalid simple string")
+	}
+	_, err := readNewLine(d[len(d)-2:])
+	if err != nil {
+		return 0, err
+	}
+	d = d[1 : len(d)-2]
+	v.Val = string(d)
+	v.Type = SimpleString
+	return len(d), nil
 }
 
 // decodeArray *<number-of-elements>\r\n<element-1>...<element-n>
