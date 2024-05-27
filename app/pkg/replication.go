@@ -1,7 +1,6 @@
 package pkg
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -70,23 +69,18 @@ func (r *Replica) Handshake() error {
 	if err != nil {
 		return fmt.Errorf("write ping: %w", err)
 	}
-	fmt.Println("wait for pong")
 	res := <-ch
-	fmt.Println("received ", string(res))
-	if !bytes.Equal(res, resp.Pong) {
-		return fmt.Errorf("expected %v. got %v", resp.Pong, res)
+	if string(res) != string(resp.Pong) {
+		return fmt.Errorf("expected PONG")
 	}
 
-	fmt.Println("writing REPLCONF 1")
 	_, err = conn.Write(resp.Encode([]string{"REPLCONF", "listening-port", strconv.Itoa(r.config.Port)}))
 	if err != nil {
 		return fmt.Errorf("write: %w", err)
 	}
 
-	fmt.Println("wait for ok")
 	res = <-ch
-	fmt.Println("received ", string(res))
-	if !bytes.Equal(res, resp.Ok) {
+	if string(res) != string(resp.Ok) {
 		return fmt.Errorf("expected ok. got %s", string(res))
 	}
 
@@ -98,7 +92,7 @@ func (r *Replica) Handshake() error {
 	fmt.Println("wait for ok")
 	res = <-ch
 	fmt.Println("received ", string(res))
-	if !bytes.Equal(res, resp.Ok) {
+	if string(res) != string(resp.Ok) {
 		return fmt.Errorf("expected ok. got %s", string(res))
 	}
 	return nil
