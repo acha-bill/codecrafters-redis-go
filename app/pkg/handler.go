@@ -154,7 +154,7 @@ func (h ReplicaConfig) parse(args []resp.Value) (replicaConfigOpts, error) {
 	sec := strings.ToLower(args[1].Val.(string))
 	switch sec {
 	case "listening-port":
-		opts.listeningPort = args[2].Val.(int)
+		opts.listeningPort, _ = strconv.Atoi(args[2].Val.(string))
 	case "capa":
 		opts.capa = args[2].Val.(string)
 	}
