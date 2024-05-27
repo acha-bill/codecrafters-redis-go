@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net"
@@ -24,7 +25,6 @@ var (
 type Replica struct {
 	Role ReplicaType
 	Of   string
-	conn net.Conn
 }
 
 func NewReplica(role ReplicaType, of string) *Replica {
@@ -34,7 +34,7 @@ func NewReplica(role ReplicaType, of string) *Replica {
 	}
 }
 
-func (r *Replica) Handshake1() error {
+func (r *Replica) Handshake() error {
 	master := strings.Split(r.Of, " ")
 	if len(master) < 2 {
 		return ErrInvalidMaster
@@ -55,6 +55,39 @@ func (r *Replica) Handshake1() error {
 		return fmt.Errorf("write ping: %w", err)
 	}
 
-	r.conn = conn
+	err = r.waitOk(conn)
+	if err != nil {
+		return err
+	}
+
+	_, err = conn.Write(resp.Encode([]string{"REPLCONF", "listening-port", "xxx"}))
+	if err != nil {
+		return fmt.Errorf("write ping: %w", err)
+	}
+	err = r.waitOk(conn)
+	if err != nil {
+		return err
+	}
+
+	_, err = conn.Write(resp.Encode([]string{"REPLCONF", "capa", "psync2"}))
+	if err != nil {
+		return fmt.Errorf("write ping: %w", err)
+	}
+	err = r.waitOk(conn)
+	if err != nil {
+		return err
+	}
 	return nil
+}
+
+func (r *Replica) waitOk(conn net.Conn) error {
+	b := make([]byte, len(resp.Ok))
+	_, err := conn.Read(b)
+	if err != nil {
+		return err
+	}
+	if bytes.Equal(b, resp.Ok) {
+		return nil
+	}
+	return fmt.Errorf("invalid response from master: %s", string(b))
 }

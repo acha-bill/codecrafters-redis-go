@@ -44,10 +44,12 @@ func main() {
 	}
 
 	if role == pkg.SlaveReplica {
-		err = repl.Handshake1()
-		if err != nil {
-			log.Fatal("handshake with master")
-		}
+		go func() {
+			err = repl.Handshake()
+			if err != nil {
+				log.Println("handshake with master")
+			}
+		}()
 	}
 
 	for {
