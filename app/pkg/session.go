@@ -106,9 +106,6 @@ func (s *Session) readLoop() {
 			log.Println("read: ", err.Error())
 			continue
 		}
-
-		fmt.Println("read command: ", string(resp.Encode(TrimBytes(buf))))
-
 		var val resp.Value
 		_, err = resp.Decode(buf, &val)
 		if err != nil {
@@ -129,6 +126,7 @@ func (s *Session) readLoop() {
 
 			buf = TrimBytes(buf)
 			for _, sl := range s.repl.slaves {
+				fmt.Printf("slave: %+v", *sl)
 				if sl.conn != nil {
 					fmt.Println("writing to slave: ", string(buf))
 					sl.conn.Write(buf)
