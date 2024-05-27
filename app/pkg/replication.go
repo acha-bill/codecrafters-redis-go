@@ -72,7 +72,9 @@ func (r *Replica) Handshake() error {
 	if err != nil {
 		return fmt.Errorf("write ping: %w", err)
 	}
+	fmt.Println("waiting for pong")
 	res := <-ch
+	fmt.Println("received pong")
 	if !bytes.Equal(res, resp.Pong) {
 		return fmt.Errorf("expected pong. got %s", string(res))
 	}
