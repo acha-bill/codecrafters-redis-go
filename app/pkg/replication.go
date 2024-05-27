@@ -52,20 +52,20 @@ func NewReplica(role ReplicaType, of string, config Config) *Replication {
 	}
 }
 
-func (r *Replication) Handshake() error {
+func (r *Replication) Handshake() (net.Conn, error) {
 	master := strings.Split(r.Of, " ")
 	if len(master) < 2 {
-		return ErrInvalidMaster
+		return nil, ErrInvalidMaster
 	}
 	host := strings.TrimSpace(master[0])
 	port, err := strconv.Atoi(strings.TrimSpace(master[1]))
 	if err != nil {
-		return fmt.Errorf("invalid port: %w", err)
+		return nil, fmt.Errorf("invalid port: %w", err)
 	}
 
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ch := make(chan []byte, 1)
@@ -82,37 +82,37 @@ func (r *Replication) Handshake() error {
 
 	_, err = conn.Write(resp.Encode([]string{"PING"}))
 	if err != nil {
-		return fmt.Errorf("write ping: %w", err)
+		return nil, fmt.Errorf("write ping: %w", err)
 	}
 	res := <-ch
 	if !bytes.Equal(res[:len(resp.Pong)], resp.Pong) {
-		return fmt.Errorf("expected PONG")
+		return nil, fmt.Errorf("expected PONG")
 	}
 
 	_, err = conn.Write(resp.Encode([]string{"REPLCONF", "listening-port", strconv.Itoa(r.config.Port)}))
 	if err != nil {
-		return fmt.Errorf("write: %w", err)
+		return nil, fmt.Errorf("write: %w", err)
 	}
 
 	res = <-ch
 	if !bytes.Equal(res[:len(resp.Ok)], resp.Ok) {
-		return fmt.Errorf("expected ok. got %s", string(res))
+		return nil, fmt.Errorf("expected ok. got %s", string(res))
 	}
 
 	_, err = conn.Write(resp.Encode([]string{"REPLCONF", "capa", "psync2"}))
 	if err != nil {
-		return fmt.Errorf("write: %w", err)
+		return nil, fmt.Errorf("write: %w", err)
 	}
 
 	res = <-ch
 	if !bytes.Equal(res[:len(resp.Ok)], resp.Ok) {
-		return fmt.Errorf("expected ok. got %s", string(res))
+		return nil, fmt.Errorf("expected ok. got %s", string(res))
 	}
 
 	_, err = conn.Write(resp.Encode([]string{"PSYNC", "?", "-1"}))
 	if err != nil {
-		return fmt.Errorf("write: %w", err)
+		return nil, fmt.Errorf("write: %w", err)
 	}
 	res = <-ch
-	return nil
+	return conn, nil
 }

@@ -128,6 +128,7 @@ func (s *Session) readLoop() {
 			buf = TrimBytes(buf)
 			for _, sl := range s.repl.slaves {
 				if sl.conn != nil {
+					fmt.Println("writing to slave: ", string(buf))
 					sl.conn.Write(buf)
 				}
 			}

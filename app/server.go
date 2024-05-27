@@ -49,10 +49,12 @@ func main() {
 
 	if role == pkg.SlaveReplica {
 		go func() {
-			err = repl.Handshake()
+			conn, err := repl.Handshake()
 			if err != nil {
 				fmt.Println("handshake with master: ", err.Error())
 			}
+			session := pkg.NewSession(conn, handlers, repl)
+			go session.Start()
 		}()
 	}
 
