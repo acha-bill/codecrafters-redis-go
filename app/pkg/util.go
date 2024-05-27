@@ -2,7 +2,7 @@ package pkg
 
 import "slices"
 
-func TrimBytes(d []byte) {
+func TrimBytes(d []byte) []byte {
 	i := slices.Index(d, 0)
-	d = d[:i]
+	return d[:i]
 }
