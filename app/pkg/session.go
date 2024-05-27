@@ -125,11 +125,9 @@ func (s *Session) readLoop() {
 				return
 			}
 
-			fmt.Printf("%+v", s.repl.slaves)
 			buf = TrimBytes(buf)
 			for _, sl := range s.repl.slaves {
 				if sl.conn != nil {
-					fmt.Println("propagating cmd: ", cmd, buf)
 					sl.conn.Write(buf)
 				}
 			}
