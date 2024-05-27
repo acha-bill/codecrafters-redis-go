@@ -114,7 +114,7 @@ func (s *Session) readLoop() {
 			continue
 		}
 
-		go func() {
+		go func(buf []byte) {
 			// propagate write commands to slaves
 			cmd, _, err := resp.DecodeCmd(val)
 			if err != nil {
@@ -131,7 +131,7 @@ func (s *Session) readLoop() {
 					sl.conn.Write(buf)
 				}
 			}
-		}()
+		}(buf[:])
 
 		s.inC <- val
 	}
