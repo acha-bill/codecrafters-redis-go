@@ -72,9 +72,7 @@ func (r *Replica) Handshake() error {
 	if err != nil {
 		return fmt.Errorf("write ping: %w", err)
 	}
-	fmt.Println("waiting for pong")
 	res := <-ch
-	fmt.Println("received pong")
 	if !bytes.Equal(res, resp.Pong) {
 		return fmt.Errorf("expected pong. got %s", string(res))
 	}
@@ -83,18 +81,18 @@ func (r *Replica) Handshake() error {
 	if err != nil {
 		return fmt.Errorf("write: %w", err)
 	}
-	//res = <-ch
-	//if !bytes.Equal(res, resp.Ok) {
-	//	return fmt.Errorf("expected ok. got %s", string(res))
-	//}
+	res = <-ch
+	if !bytes.Equal(res, resp.Ok) {
+		return fmt.Errorf("expected ok. got %s", string(res))
+	}
 
 	_, err = conn.Write(resp.Encode([]string{"REPLCONF", "capa", "psync2"}))
 	if err != nil {
 		return fmt.Errorf("write: %w", err)
 	}
-	//res = <-ch
-	//if !bytes.Equal(res, resp.Ok) {
-	//	return fmt.Errorf("expected ok. got %s", string(res))
-	//}
+	res = <-ch
+	if !bytes.Equal(res, resp.Ok) {
+		return fmt.Errorf("expected ok. got %s", string(res))
+	}
 	return nil
 }
