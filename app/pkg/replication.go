@@ -27,6 +27,7 @@ var (
 type Replica struct {
 	Role   ReplicaType
 	Of     string
+	ID     string
 	config Config
 }
 
@@ -35,6 +36,7 @@ func NewReplica(role ReplicaType, of string, config Config) *Replica {
 		Role:   role,
 		Of:     of,
 		config: config,
+		ID:     "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb",
 	}
 }
 

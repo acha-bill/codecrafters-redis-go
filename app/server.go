@@ -44,6 +44,7 @@ func main() {
 		"GET":      pkg.NewGet(store),
 		"INFO":     pkg.NewInfo(repl),
 		"REPLCONF": pkg.ReplicaConfig{},
+		"PSYNC":    pkg.NewPsync(repl),
 	}
 
 	if role == pkg.SlaveReplica {

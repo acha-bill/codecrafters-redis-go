@@ -129,7 +129,7 @@ func (h Info) Handle(args []resp.Value) ([]byte, error) {
 
 	m := map[string]any{
 		"role":               h.repl.Role,
-		"master_replid":      "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb",
+		"master_replid":      h.repl.ID,
 		"master_repl_offset": 0,
 	}
 	r := ""
@@ -167,4 +167,19 @@ func (h ReplicaConfig) Handle(args []resp.Value) ([]byte, error) {
 		return nil, err
 	}
 	return resp.Ok, nil
+}
+
+type Psync struct {
+	repl *Replica
+}
+
+func NewPsync(repl *Replica) Psync {
+	return Psync{repl: repl}
+}
+
+func (h Psync) Handle(args []resp.Value) ([]byte, error) {
+	if len(args) < 3 {
+		return nil, ErrInvalidCmd
+	}
+	return resp.EncodeSimple(fmt.Sprintf("FULLRESYNC %s 0", h.repl.ID)), nil
 }
