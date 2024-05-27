@@ -121,7 +121,7 @@ func (s *Session) readLoop() {
 				fmt.Println("decode cmd: ", err.Error())
 				return
 			}
-			if cmd == "SET" {
+			if cmd != "SET" {
 				return
 			}
 
