@@ -78,6 +78,7 @@ func (r *Replica) Handshake() error {
 		return fmt.Errorf("expected pong. got %s", string(res))
 	}
 
+	fmt.Println("writing REPLCONF 1")
 	_, err = conn.Write(resp.Encode([]string{"REPLCONF", "listening-port", strconv.Itoa(r.config.Port)}))
 	if err != nil {
 		return fmt.Errorf("write: %w", err)
