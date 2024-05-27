@@ -22,8 +22,9 @@ var (
 	ErrInvalidTerminator = errors.New("invalid terminator")
 	ErrMaxBulkLen        = errors.New("max bulk length")
 
-	Nil = []byte("$-1\r\n")
-	Ok  = []byte("+OK\r\n")
+	Nil  = []byte("$-1\r\n")
+	Ok   = []byte("+OK\r\n")
+	Pong = []byte("+PONG\r\n")
 )
 
 type Value struct {

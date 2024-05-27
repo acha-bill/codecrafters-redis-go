@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"strconv"
 	"strings"
@@ -23,14 +24,16 @@ var (
 )
 
 type Replica struct {
-	Role ReplicaType
-	Of   string
+	Role   ReplicaType
+	Of     string
+	config Config
 }
 
-func NewReplica(role ReplicaType, of string) *Replica {
+func NewReplica(role ReplicaType, of string, config Config) *Replica {
 	return &Replica{
-		Role: role,
-		Of:   of,
+		Role:   role,
+		Of:     of,
+		config: config,
 	}
 }
 
@@ -50,44 +53,44 @@ func (r *Replica) Handshake() error {
 		return err
 	}
 
+	ch := make(chan []byte)
+	go func() {
+		for {
+			b := make([]byte, 1024)
+			_, err := conn.Read(b)
+			if err != nil {
+				log.Println("read ", err.Error())
+			}
+
+			ch <- b
+		}
+	}()
+
 	_, err = conn.Write(resp.Encode([]string{"PING"}))
 	if err != nil {
 		return fmt.Errorf("write ping: %w", err)
 	}
-
-	err = r.waitOk(conn)
-	if err != nil {
-		return err
+	res := <-ch
+	if !bytes.Equal(res, resp.Pong) {
+		return fmt.Errorf("expected pong. got %s", string(res))
 	}
 
-	_, err = conn.Write(resp.Encode([]string{"REPLCONF", "listening-port", "xxx"}))
+	_, err = conn.Write(resp.Encode([]string{"REPLCONF", "listening-port", strconv.Itoa(r.config.Port)}))
 	if err != nil {
-		return fmt.Errorf("write ping: %w", err)
+		return fmt.Errorf("write: %w", err)
 	}
-	err = r.waitOk(conn)
-	if err != nil {
-		return err
+	res = <-ch
+	if !bytes.Equal(res, resp.Ok) {
+		return fmt.Errorf("expected ok. got %s", string(res))
 	}
 
 	_, err = conn.Write(resp.Encode([]string{"REPLCONF", "capa", "psync2"}))
 	if err != nil {
-		return fmt.Errorf("write ping: %w", err)
+		return fmt.Errorf("write: %w", err)
 	}
-	err = r.waitOk(conn)
-	if err != nil {
-		return err
+	res = <-ch
+	if !bytes.Equal(res, resp.Ok) {
+		return fmt.Errorf("expected ok. got %s", string(res))
 	}
 	return nil
-}
-
-func (r *Replica) waitOk(conn net.Conn) error {
-	b := make([]byte, len(resp.Ok))
-	_, err := conn.Read(b)
-	if err != nil {
-		return err
-	}
-	if bytes.Equal(b, resp.Ok) {
-		return nil
-	}
-	return fmt.Errorf("invalid response from master: %s", string(b))
 }

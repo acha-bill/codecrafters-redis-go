@@ -23,7 +23,9 @@ func main() {
 	flag.StringVar(&replicaOf, "replicaof", "", "the master to follow")
 	flag.Parse()
 
-	l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
+	config := pkg.Config{Port: port}
+
+	l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", config.Port))
 	if err != nil {
 		fmt.Println("Failed to bind to port 6379")
 		os.Exit(1)
@@ -34,7 +36,7 @@ func main() {
 	if replicaOf != "" {
 		role = pkg.SlaveReplica
 	}
-	repl := pkg.NewReplica(role, replicaOf)
+	repl := pkg.NewReplica(role, replicaOf, config)
 	handlers := map[string]pkg.Handler{
 		"PING": pkg.Ping{},
 		"ECHO": pkg.Echo{},
