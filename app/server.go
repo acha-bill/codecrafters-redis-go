@@ -53,7 +53,7 @@ func main() {
 			if err != nil {
 				fmt.Println("handshake with master: ", err.Error())
 			}
-			session := pkg.NewSession(conn, handlers, repl)
+			session := pkg.NewSession(conn, handlers, repl).Responsive(false)
 			go session.Start()
 		}()
 	}

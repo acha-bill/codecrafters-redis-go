@@ -12,24 +12,32 @@ import (
 
 // Session is the life cycle of a connection
 type Session struct {
-	conn     net.Conn
-	handlers map[string]Handler
-	inC      chan resp.Value
-	outC     chan []byte
-	repl     *Replication
-	id       int64
+	conn       net.Conn
+	handlers   map[string]Handler
+	inC        chan resp.Value
+	outC       chan []byte
+	repl       *Replication
+	id         int64
+	responsive bool
 }
 
 func NewSession(conn net.Conn, handlers map[string]Handler, repl *Replication) *Session {
 	return &Session{
-		conn:     conn,
-		handlers: handlers,
-		inC:      make(chan resp.Value),
-		outC:     make(chan []byte),
-		repl:     repl,
-		id:       time.Now().UnixNano(),
+		conn:       conn,
+		handlers:   handlers,
+		inC:        make(chan resp.Value),
+		outC:       make(chan []byte),
+		repl:       repl,
+		id:         time.Now().UnixNano(),
+		responsive: true,
 	}
 }
+
+func (s *Session) Responsive(v bool) *Session {
+	s.responsive = v
+	return s
+}
+
 func (s *Session) Start() {
 	go s.readLoop()
 	go s.writeLoop()
@@ -67,7 +75,9 @@ func (s *Session) handle(in resp.Value) error {
 	defer close(res)
 	go func() {
 		for r := range res {
-			s.outC <- r
+			if s.responsive {
+				s.outC <- r
+			}
 		}
 	}()
 
