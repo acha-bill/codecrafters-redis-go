@@ -16,6 +16,7 @@ const (
 	SimpleString TYPE = '+'
 	BulkString   TYPE = '$'
 	Array        TYPE = '*'
+	Int          TYPE = ':'
 )
 const MaxBulkLen = 536870912
 
@@ -67,6 +68,8 @@ func Encode(v any) []byte {
 	t := reflect.TypeOf(v)
 	var res []byte
 	switch t.Kind() {
+	case reflect.Int:
+		res = encodeInt(v)
 	case reflect.String:
 		res = encodeBulkString(v)
 	case reflect.Slice, reflect.Array:
@@ -74,6 +77,10 @@ func Encode(v any) []byte {
 	default:
 	}
 	return res
+}
+
+func encodeInt(v any) []byte {
+	return []byte(fmt.Sprintf(":%d%s", v, crlf))
 }
 
 func encodeBulkString(v any) []byte {

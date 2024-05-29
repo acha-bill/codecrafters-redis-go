@@ -228,3 +228,10 @@ func (h Psync) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 
 	return nil
 }
+
+type Wait struct{}
+
+func (h Wait) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
+	res <- resp.Encode(0)
+	return nil
+}

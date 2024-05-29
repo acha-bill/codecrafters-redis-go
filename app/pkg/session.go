@@ -87,25 +87,18 @@ func (s *Session) handshake() {
 		<-s.handshakeStepper
 	}
 
-	fmt.Println("wait for rdb")
 	<-s.handshakeStepper
-	fmt.Println("rdb got")
 	s.handshaking.Store(false)
-	fmt.Println("updated handshaking: ", s.handshaking.Load())
 }
 
 func (s *Session) handleHandshakeRes(in Input) {
-	fmt.Printf("input: %q, last cmd = %s\n", string(in.b), s.handshakeCmd)
-	fmt.Println("handshaking: ", s.handshaking.Load())
 	r := strings.ToUpper(in.v.Val.(string))
 	if (s.handshakeCmd == "PING" && r == "PONG") ||
 		(s.handshakeCmd == "REPLCONF" && r == "OK") {
 		s.handshakeStepper <- 1
 	}
 	if s.handshakeCmd == "PSYNC" {
-		if strings.HasPrefix(r, "FULLRESYNC") {
-			fmt.Println("fullresync received")
-		} else {
+		if !strings.HasPrefix(r, "FULLRESYNC") {
 			fmt.Println("rdb received")
 			s.handshakeCmd = ""
 		}
@@ -121,7 +114,6 @@ func (s *Session) Close() {
 
 func (s *Session) worker() {
 	for in := range s.inC {
-		fmt.Println("handshaking worker: ", s.handshaking.Load())
 		if s.handshaking.Load() {
 			s.handleHandshakeRes(in)
 			continue
@@ -244,7 +236,6 @@ func (s *Session) push(buf []byte, val resp.Value) {
 			return
 		}
 
-		fmt.Printf("replicate: %q\n", string(buf))
 		for _, sl := range s.repl.slaves {
 			sl.Push(buf)
 		}
