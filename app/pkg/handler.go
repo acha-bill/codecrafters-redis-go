@@ -189,9 +189,10 @@ func (h ReplicaConfig) Handle(sId int64, args []resp.Value, res chan<- []byte) e
 	}
 	s.conf = true
 
-	fmt.Println("ack is ", h.ack.Load())
+	ack := fmt.Sprintf("%d", h.ack.Load())
+	fmt.Println("ack is ", ack)
 	if o.getack != "" {
-		res <- resp.Encode([]string{"REPLCONF", "ACK", strconv.FormatInt(h.ack.Load(), 64)})
+		res <- resp.Encode([]string{"REPLCONF", "ACK", ack})
 		return nil
 	}
 
@@ -222,6 +223,7 @@ func (h Psync) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 	s.handshake = s.conf && s.psync
 
 	res <- resp.EncodeSimple(fmt.Sprintf("FULLRESYNC %s 0", h.repl.ID))
+	time.Sleep(1 * time.Second)
 	res <- resp.EncodeRDB()
 
 	return nil

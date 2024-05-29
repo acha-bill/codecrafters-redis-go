@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 )
@@ -32,6 +33,7 @@ type Session struct {
 	handshaking      bool
 	handshakeStepper chan any
 	handshakeCmd     string
+	fullResync       bool
 
 	// ack
 	ack *atomic.Int64
@@ -84,14 +86,20 @@ func (s *Session) handshake() {
 		s.conn.Write(resp.Encode(cmd))
 		<-s.handshakeStepper
 	}
+	<-s.handshakeStepper
 	s.handshaking = false
 }
 
 func (s *Session) handleHandshakeRes(in Input) {
-	r := in.v.Val.(string)
+	r := strings.ToUpper(in.v.Val.(string))
 	if (s.handshakeCmd == "PING" && r == "PONG") ||
-		(s.handshakeCmd == "REPLCONF" && r == "OK") ||
-		(s.handshakeCmd == "PSYNC") {
+		(s.handshakeCmd == "REPLCONF" && r == "OK") {
+		s.handshakeStepper <- 1
+	}
+	if s.handshakeCmd == "PSYNC" {
+		if !strings.HasPrefix(r, "FULLRESYNC") {
+			fmt.Printf("psync: %q\n", string(in.b))
+		}
 		s.handshakeStepper <- 1
 	}
 }
@@ -108,9 +116,10 @@ func (s *Session) worker() {
 			s.handleHandshakeRes(in)
 			continue
 		}
+
 		err := s.handle(in)
 		if err != nil {
-			fmt.Println("handle input", in, err.Error())
+			fmt.Printf("handle input: %q\n, %s", string(in.b), err.Error())
 			continue
 		}
 	}

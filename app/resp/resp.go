@@ -124,11 +124,8 @@ func decodeSimple(d []byte, v *Value) (int, error) {
 		return 0, err
 	}
 
-	fmt.Printf("%q\n", string(d))
 	d = d[:len(d)-n]
-	fmt.Printf("%q\n", string(d))
 	d = d[1:]
-	fmt.Printf("%q\n", string(d))
 	v.Val = string(d)
 	v.Type = SimpleString
 	return l, nil
