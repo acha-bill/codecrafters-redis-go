@@ -30,7 +30,7 @@ type Session struct {
 
 	// handshake
 	shouldHandshake  bool
-	handshaking      bool
+	handshaking      atomic.Bool
 	handshakeStepper chan any
 	handshakeCmd     string
 	fullResync       bool
@@ -60,7 +60,7 @@ func (s *Session) Responsive(v bool) *Session {
 }
 func (s *Session) Handshake(v bool) *Session {
 	s.shouldHandshake = v
-	s.handshaking = true
+	s.handshaking.Store(v)
 	return s
 }
 
@@ -87,7 +87,7 @@ func (s *Session) handshake() {
 		<-s.handshakeStepper
 	}
 	<-s.handshakeStepper
-	s.handshaking = false
+	s.handshaking.Store(false)
 }
 
 func (s *Session) handleHandshakeRes(in Input) {
@@ -114,7 +114,7 @@ func (s *Session) Close() {
 
 func (s *Session) worker() {
 	for in := range s.inC {
-		if s.handshaking {
+		if s.handshaking.Load() {
 			s.handleHandshakeRes(in)
 			continue
 		}
