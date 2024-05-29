@@ -68,7 +68,7 @@ func (s *Session) handle(in resp.Value) error {
 	if !ok {
 		return fmt.Errorf("handler for cmd %s not found", cmd)
 	}
-	fmt.Printf("handling %s cmd with args %+v", cmd, args)
+	fmt.Printf("handling %s cmd with args %+v\n", cmd, args)
 
 	res := make(chan []byte)
 	defer close(res)
@@ -106,7 +106,7 @@ func (s *Session) writeLoop() {
 func (s *Session) readLoop() {
 	buf := make([]byte, 1024)
 	for {
-		_, err := s.conn.Read(buf)
+		n, err := s.conn.Read(buf)
 		if errors.Is(err, io.EOF) {
 			s.Close()
 			return
@@ -115,6 +115,7 @@ func (s *Session) readLoop() {
 			fmt.Println("read: ", err.Error())
 			continue
 		}
+		buf = buf[:n]
 		var val resp.Value
 		_, err = resp.Decode(buf, &val)
 		if err != nil {
@@ -130,15 +131,17 @@ func (s *Session) readLoop() {
 				return
 			}
 			if cmd != "SET" {
+				fmt.Println("skipping non-write cmd: ", cmd)
 				return
 			}
 
-			buf = TrimBytes(buf)
 			for _, sl := range s.repl.slaves {
-				fmt.Printf("slave: %+v", *sl)
 				if sl.conn != nil {
 					fmt.Println("writing to slave: ", string(buf))
-					sl.conn.Write(buf)
+					_, err = sl.conn.Write(buf)
+					if err != nil {
+						fmt.Println("write to slave: ", err.Error())
+					}
 				}
 			}
 		}(buf[:], val)
