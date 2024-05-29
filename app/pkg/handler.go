@@ -200,15 +200,18 @@ func (h Psync) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 	if len(args) < 3 {
 		return ErrInvalidCmd
 	}
-	res <- resp.EncodeSimple(fmt.Sprintf("FULLRESYNC %s 0", h.repl.ID))
-	res <- resp.EncodeRDB()
 
 	s, ok := h.repl.slaves[sId]
 	if !ok {
 		s = NewReplica(sId)
 		h.repl.slaves[sId] = s
 	}
+
 	s.psync = true
 	s.handshake = s.conf && s.psync
+
+	res <- resp.EncodeSimple(fmt.Sprintf("FULLRESYNC %s 0", h.repl.ID))
+	res <- resp.EncodeRDB()
+
 	return nil
 }
