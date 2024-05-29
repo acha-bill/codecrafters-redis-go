@@ -34,10 +34,10 @@ type Session struct {
 	handshakeCmd     string
 
 	// ack
-	ack *atomic.Int64
+	ack *atomic.Int32
 }
 
-func NewSession(conn net.Conn, handlers map[string]Handler, repl *Replication, config Config, ack *atomic.Int64) *Session {
+func NewSession(conn net.Conn, handlers map[string]Handler, repl *Replication, config Config, ack *atomic.Int32) *Session {
 	return &Session{
 		conn:             conn,
 		handlers:         handlers,
@@ -147,7 +147,7 @@ func (s *Session) handle(in Input) error {
 	}
 
 	// update ack
-	s.ack.Add(int64(len(in.b)))
+	s.ack.Add(int32(len(in.b)))
 
 	// setup slave conn
 	sl, ok := s.repl.slaves[s.id]
