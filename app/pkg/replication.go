@@ -4,12 +4,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"io"
 	"net"
 	"strconv"
 	"strings"
-
-	"github.com/codecrafters-io/redis-starter-go/app/resp"
 )
 
 type ReplicaType string
@@ -106,10 +105,12 @@ func (r *Replication) Handshake() (net.Conn, error) {
 	go func() {
 		for {
 			b := make([]byte, 1024)
-			_, err := conn.Read(b)
+			n, err := conn.Read(b)
 			if err != nil && !errors.Is(err, io.EOF) {
 				fmt.Println("read ", err.Error())
 			}
+			b = b[:n]
+			fmt.Printf("read: %q\n", string(b))
 			ch <- b
 		}
 	}()
@@ -119,17 +120,20 @@ func (r *Replication) Handshake() (net.Conn, error) {
 		return nil, fmt.Errorf("write ping: %w", err)
 	}
 	res := <-ch
-	if !bytes.Equal(res[:len(resp.Pong)], resp.Pong) {
+	fmt.Printf("got %q, want %q\n", string(res), string(resp.Encode("PONG")))
+	if !bytes.Equal(res, resp.Encode("PONG")) {
 		return nil, fmt.Errorf("expected PONG")
 	}
 
-	_, err = conn.Write(resp.Encode([]string{"REPLCONF", "listening-port", strconv.Itoa(r.config.Port)}))
+	s := resp.Encode([]string{"REPLCONF", "listening-port", strconv.Itoa(r.config.Port)})
+	fmt.Printf("sending: %q\n", string(s))
+	_, err = conn.Write(s)
 	if err != nil {
 		return nil, fmt.Errorf("write: %w", err)
 	}
 
 	res = <-ch
-	if !bytes.Equal(res[:len(resp.Ok)], resp.Ok) {
+	if !bytes.Equal(res, resp.Encode("OK")) {
 		return nil, fmt.Errorf("expected ok. got %s", string(res))
 	}
 
@@ -139,7 +143,7 @@ func (r *Replication) Handshake() (net.Conn, error) {
 	}
 
 	res = <-ch
-	if !bytes.Equal(res[:len(resp.Ok)], resp.Ok) {
+	if !bytes.Equal(res, resp.Encode("PONG")) {
 		return nil, fmt.Errorf("expected ok. got %s", string(res))
 	}
 

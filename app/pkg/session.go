@@ -38,9 +38,9 @@ func (s *Session) Responsive(v bool) *Session {
 }
 
 func (s *Session) Start() {
+	go s.worker()
 	go s.readLoop()
 	go s.writeLoop()
-	go s.worker()
 }
 
 func (s *Session) Close() {
@@ -124,23 +124,25 @@ func (s *Session) readLoop() {
 			continue
 		}
 
-		// propagate write commands to slaves
-		if s.repl.Role == MasterReplica {
-			cmd, _, err := resp.DecodeCmd(val)
-			if err != nil {
-				fmt.Println("decode cmd: ", err.Error())
-				return
-			}
-			if cmd != "SET" {
-				return
-			}
+		s.push(buf[:], val)
+		s.inC <- val
+	}
+}
 
-			fmt.Printf("replicate: %q\n", string(buf))
-			for _, sl := range s.repl.slaves {
-				sl.Push(buf)
-			}
+func (s *Session) push(buf []byte, val resp.Value) {
+	if s.repl.Role == MasterReplica {
+		cmd, _, err := resp.DecodeCmd(val)
+		if err != nil {
+			fmt.Println("decode cmd: ", err.Error())
+			return
+		}
+		if cmd != "SET" {
+			return
 		}
 
-		s.inC <- val
+		fmt.Printf("replicate: %q\n", string(buf))
+		for _, sl := range s.repl.slaves {
+			sl.Push(buf)
+		}
 	}
 }
