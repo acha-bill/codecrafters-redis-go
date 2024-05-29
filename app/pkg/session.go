@@ -12,26 +12,35 @@ import (
 
 // Session is the life cycle of a connection
 type Session struct {
-	conn       net.Conn
-	handlers   map[string]Handler
-	inC        chan resp.Value
-	outC       chan []byte
-	repl       *Replication
-	id         int64
-	responsive bool
-	config     Config
+	conn             net.Conn
+	handlers         map[string]Handler
+	inC              chan resp.Value
+	outC             chan []byte
+	repl             *Replication
+	id               int64
+	responsive       bool
+	config           Config
+	handshaking      bool
+	handshakeStepper chan any
+	handshakeCmd     string
 }
 
 func NewSession(conn net.Conn, handlers map[string]Handler, repl *Replication, config Config) *Session {
+	handshaking := true
+	if repl.Role == MasterReplica {
+		handshaking = false
+	}
 	return &Session{
-		conn:       conn,
-		handlers:   handlers,
-		inC:        make(chan resp.Value),
-		outC:       make(chan []byte),
-		repl:       repl,
-		id:         time.Now().UnixNano(),
-		responsive: true,
-		config:     config,
+		conn:             conn,
+		handlers:         handlers,
+		inC:              make(chan resp.Value),
+		outC:             make(chan []byte),
+		repl:             repl,
+		id:               time.Now().UnixNano(),
+		responsive:       true,
+		config:           config,
+		handshaking:      handshaking,
+		handshakeStepper: make(chan any),
 	}
 }
 
@@ -45,12 +54,32 @@ func (s *Session) Start() {
 	go s.readLoop()
 	go s.writeLoop()
 
-	// handshake
 	if s.repl.Role == SlaveReplica {
-		s.conn.Write(resp.Encode([]string{"PING"}))
-		s.conn.Write(resp.Encode([]string{"REPLCONF", "listening-port", strconv.Itoa(s.config.Port)}))
-		s.conn.Write(resp.Encode([]string{"REPLCONF", "capa", "psync2"}))
-		s.conn.Write(resp.Encode([]string{"PSYNC", "?", "-1"}))
+		go s.handshake()
+	}
+}
+
+func (s *Session) handshake() {
+	handshakeCmds := [][]string{
+		{"PING"},
+		{"REPLCONF", "listening-port", strconv.Itoa(s.config.Port)},
+		{"REPLCONF", "capa", "psync2"},
+		{"PSYNC", "?", "-1"},
+	}
+	for _, cmd := range handshakeCmds {
+		s.handshakeCmd = cmd[0]
+		s.conn.Write(resp.Encode(cmd))
+		<-s.handshakeStepper
+	}
+	s.handshaking = false
+}
+
+func (s *Session) handleHandshakeRes(v resp.Value) {
+	r := v.Val.(string)
+	if (s.handshakeCmd == "PING" && r == "PONG") ||
+		(s.handshakeCmd == "REPLCONF" && r == "OK") ||
+		(s.handshakeCmd == "PSYNC") {
+		s.handshakeStepper <- 1
 	}
 }
 
@@ -62,6 +91,10 @@ func (s *Session) Close() {
 
 func (s *Session) worker() {
 	for in := range s.inC {
+		if s.handshaking {
+			s.handleHandshakeRes(in)
+			continue
+		}
 		err := s.handle(in)
 		if err != nil {
 			fmt.Println("handle input", in, err.Error())

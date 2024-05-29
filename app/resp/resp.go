@@ -58,6 +58,7 @@ func EncodeRDB() []byte {
 	b := []byte(fmt.Sprintf("$%d", len(f)))
 	b = append(b, crlf...)
 	b = append(b, f...)
+	b = append(b, crlf...)
 	return b
 }
 
