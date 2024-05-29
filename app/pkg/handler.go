@@ -180,9 +180,7 @@ func (h ReplicaConfig) Handle(sId int64, args []resp.Value, res chan<- []byte) e
 
 	s, ok := h.repl.slaves[sId]
 	if !ok {
-		s = &Replica{
-			sId: sId,
-		}
+		s = NewReplica(sId)
 		h.repl.slaves[sId] = s
 	}
 	s.conf = true
@@ -207,12 +205,10 @@ func (h Psync) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 
 	s, ok := h.repl.slaves[sId]
 	if !ok {
-		s = &Replica{
-			sId: sId,
-		}
+		s = NewReplica(sId)
 		h.repl.slaves[sId] = s
 	}
 	s.psync = true
-	s.ready = s.conf && s.psync
+	s.handshake = s.conf && s.psync
 	return nil
 }

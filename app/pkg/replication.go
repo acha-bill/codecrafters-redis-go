@@ -24,13 +24,41 @@ var (
 )
 
 type Replica struct {
-	sId   int64
-	capa  map[string]string
-	port  int
-	conf  bool
-	psync bool
-	ready bool
-	conn  net.Conn
+	sId       int64
+	capa      map[string]string
+	port      int
+	conf      bool
+	psync     bool
+	handshake bool
+	conn      net.Conn
+
+	ch chan []byte
+}
+
+func NewReplica(id int64) *Replica {
+	r := &Replica{
+		sId: id,
+		ch:  make(chan []byte, 1024),
+	}
+
+	go r.Start()
+	return r
+}
+
+func (r *Replica) Push(b []byte) {
+	r.ch <- b
+}
+
+func (r *Replica) Start() {
+	for r.conn == nil {
+	}
+
+	for v := range r.ch {
+		_, err := r.conn.Write(v)
+		if err != nil {
+			fmt.Println("write to slave: ", err.Error())
+		}
+	}
 }
 
 type Replication struct {
@@ -41,7 +69,7 @@ type Replication struct {
 	slaves map[int64]*Replica
 }
 
-func NewReplica(role ReplicaType, of string, config Config) *Replication {
+func NewReplication(role ReplicaType, of string, config Config) *Replication {
 	return &Replication{
 		Role:   role,
 		Of:     of,

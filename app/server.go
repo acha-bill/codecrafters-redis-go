@@ -36,7 +36,7 @@ func main() {
 	if replicaOf != "" {
 		role = pkg.SlaveReplica
 	}
-	repl := pkg.NewReplica(role, replicaOf, config)
+	repl := pkg.NewReplication(role, replicaOf, config)
 	handlers := map[string]pkg.Handler{
 		"PING":     pkg.Ping{},
 		"ECHO":     pkg.Echo{},

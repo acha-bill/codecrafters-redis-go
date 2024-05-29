@@ -41,6 +41,8 @@ func (s *Session) Start() {
 	go s.readLoop()
 	go s.writeLoop()
 	go s.worker()
+
+	s.outC <- resp.Encode("READY")
 }
 
 func (s *Session) Close() {
@@ -87,7 +89,7 @@ func (s *Session) handle(in resp.Value) error {
 
 	// setup slave conn
 	sl, ok := s.repl.slaves[s.id]
-	if ok && sl.ready && sl.conn == nil {
+	if ok && sl.handshake && sl.conn == nil {
 		sl.conn = s.conn
 	}
 
@@ -123,26 +125,19 @@ func (s *Session) readLoop() {
 			continue
 		}
 
+		// propagate write commands to slaves
 		go func(buf []byte, val resp.Value) {
-			// propagate write commands to slaves
 			cmd, _, err := resp.DecodeCmd(val)
 			if err != nil {
 				fmt.Println("decode cmd: ", err.Error())
 				return
 			}
 			if cmd != "SET" {
-				fmt.Println("skipping non-write cmd: ", cmd)
 				return
 			}
 
 			for _, sl := range s.repl.slaves {
-				if sl.conn != nil {
-					fmt.Println("writing to slave: ", string(buf))
-					_, err = sl.conn.Write(buf)
-					if err != nil {
-						fmt.Println("write to slave: ", err.Error())
-					}
-				}
+				sl.Push(buf)
 			}
 		}(buf[:], val)
 
