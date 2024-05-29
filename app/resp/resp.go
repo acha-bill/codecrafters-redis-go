@@ -115,20 +115,21 @@ func Decode(d []byte, v *Value) (n int, err error) {
 }
 
 func decodeSimple(d []byte, v *Value) (int, error) {
-	l := len(d)
 	if len(d) < 3 {
 		return 0, fmt.Errorf("invalid simple string")
 	}
-	n, err := readNewLine(d[len(d)-crlLen:])
-	if err != nil {
-		return 0, err
-	}
 
-	d = d[:len(d)-n]
-	d = d[1:]
+	var i int
+	for i = 0; i < len(d); i++ {
+		_, err := readNewLine(d[i+1 : i+3])
+		if err == nil {
+			break
+		}
+	}
+	d = d[1 : i+1]
 	v.Val = string(d)
 	v.Type = SimpleString
-	return l, nil
+	return i + 3, nil
 }
 
 // decodeArray *<number-of-elements>\r\n<element-1>...<element-n>

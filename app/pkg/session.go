@@ -191,23 +191,7 @@ func (s *Session) readLoop() {
 			continue
 		}
 		buf = buf[:n]
-
-		var bufs [][]byte
-		var vals []resp.Value
-
-		for string(buf) != "" {
-			var val resp.Value
-			n1, err := resp.Decode(buf, &val)
-			if err != nil {
-				fmt.Printf("decode input: %q: %s\n", string(buf), err.Error())
-				continue
-			}
-			buf0, buf1 := buf[0:n1], buf[n1:]
-			bufs = append(bufs, buf0)
-			vals = append(vals, val)
-			buf = buf1
-		}
-
+		bufs, vals := parseInputs(buf)
 		if len(bufs) != len(vals) {
 			fmt.Println("len mismatch. want ", len(bufs), " got ", len(vals))
 			continue
@@ -220,6 +204,25 @@ func (s *Session) readLoop() {
 			}
 		}
 	}
+}
+
+func parseInputs(buf []byte) ([][]byte, []resp.Value) {
+	var bufs [][]byte
+	var vals []resp.Value
+
+	for string(buf) != "" {
+		var val resp.Value
+		n1, err := resp.Decode(buf, &val)
+		if err != nil {
+			fmt.Printf("decode input: %q: %s\n", string(buf), err.Error())
+			continue
+		}
+		buf0, buf1 := buf[0:n1], buf[n1:]
+		bufs = append(bufs, buf0)
+		vals = append(vals, val)
+		buf = buf1
+	}
+	return bufs, vals
 }
 
 func (s *Session) push(buf []byte, val resp.Value) {
