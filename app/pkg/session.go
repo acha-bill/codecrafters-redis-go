@@ -139,6 +139,7 @@ func (s *Session) handle(in resp.Value) error {
 
 func (s *Session) writeLoop() {
 	for d := range s.outC {
+		fmt.Printf("writing: %q\n", string(d))
 		_, err := s.conn.Write(d)
 		if err != nil {
 			fmt.Println("write to conn: ", err.Error())
