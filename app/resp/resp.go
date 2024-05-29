@@ -122,7 +122,8 @@ func decodeSimple(d []byte, v *Value) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	d = d[1:n]
+	d = d[:n]
+	d = d[1:]
 	v.Val = string(d)
 	v.Type = SimpleString
 	return len(d), nil
