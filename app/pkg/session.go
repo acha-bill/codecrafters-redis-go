@@ -29,10 +29,6 @@ type Session struct {
 }
 
 func NewSession(conn net.Conn, handlers map[string]Handler, repl *Replication, config Config) *Session {
-	handshaking := true
-	if repl.Role == MasterReplica {
-		handshaking = false
-	}
 	return &Session{
 		conn:             conn,
 		handlers:         handlers,
@@ -42,7 +38,6 @@ func NewSession(conn net.Conn, handlers map[string]Handler, repl *Replication, c
 		id:               time.Now().UnixNano(),
 		responsive:       true,
 		config:           config,
-		handshaking:      handshaking,
 		handshakeStepper: make(chan any),
 	}
 }
@@ -53,6 +48,7 @@ func (s *Session) Responsive(v bool) *Session {
 }
 func (s *Session) Handshake(v bool) *Session {
 	s.shouldHandshake = v
+	s.handshaking = true
 	return s
 }
 
