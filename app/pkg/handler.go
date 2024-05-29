@@ -73,7 +73,6 @@ func (h *Set) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 		return err
 	}
 	h.store.Set(k, v, o.px)
-	fmt.Printf("set %s:%s, store: %s\n", k, v, h.store.Print())
 	res <- resp.Ok
 	return nil
 }
@@ -96,7 +95,6 @@ func (h *Get) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 	} else {
 		r = resp.Nil
 	}
-	fmt.Printf("get %s, store: %s\n", k, h.store.Print())
 	res <- r
 	return nil
 }

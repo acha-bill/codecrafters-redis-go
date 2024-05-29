@@ -116,6 +116,7 @@ func (s *Session) readLoop() {
 			continue
 		}
 		buf = buf[:n]
+		fmt.Println("read: ", string(buf))
 		var val resp.Value
 		_, err = resp.Decode(buf, &val)
 		if err != nil {
@@ -133,6 +134,8 @@ func (s *Session) readLoop() {
 			if cmd != "SET" {
 				return
 			}
+
+			fmt.Println("replicate: ", string(buf))
 
 			for _, sl := range s.repl.slaves {
 				sl.Push(buf)
