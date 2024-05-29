@@ -89,6 +89,7 @@ func (s *Session) handshake() {
 
 	<-s.handshakeStepper
 	s.handshaking.Store(false)
+	fmt.Println("hanshake updated: ", s.handshaking.Load())
 }
 
 func (s *Session) handleHandshakeRes(in Input) {
@@ -114,6 +115,7 @@ func (s *Session) Close() {
 
 func (s *Session) worker() {
 	for in := range s.inC {
+		fmt.Println("hanshaking worker: ", s.handshaking.Load())
 		if s.handshaking.Load() {
 			s.handleHandshakeRes(in)
 			continue
