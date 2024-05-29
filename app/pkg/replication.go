@@ -46,6 +46,7 @@ func NewReplica(id int64) *Replica {
 }
 
 func (r *Replica) Push(b []byte) {
+	fmt.Println("pushing cmd to buf: ", string(b))
 	r.ch <- b
 }
 
