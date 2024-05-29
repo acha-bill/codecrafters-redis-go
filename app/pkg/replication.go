@@ -124,7 +124,7 @@ func (r *Replication) Handshake(stop chan any) (net.Conn, error) {
 		return nil, fmt.Errorf("write ping: %w", err)
 	}
 	res := <-ch
-	if !bytes.Equal(res, resp.Encode("PONG")) {
+	if !bytes.Equal(res, resp.EncodeSimple("PONG")) {
 		return nil, fmt.Errorf("expected PONG")
 	}
 
