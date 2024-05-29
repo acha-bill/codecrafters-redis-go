@@ -95,7 +95,7 @@ func (s *Session) handshake() {
 }
 
 func (s *Session) handleHandshakeRes(in Input) {
-	fmt.Printf("input: %q\n, last cmd = %s\n", string(in.b), s.handshakeCmd)
+	fmt.Printf("input: %q, last cmd = %s\n", string(in.b), s.handshakeCmd)
 	fmt.Println("handshaking: ", s.handshaking.Load())
 	r := strings.ToUpper(in.v.Val.(string))
 	if (s.handshakeCmd == "PING" && r == "PONG") ||
@@ -107,9 +107,9 @@ func (s *Session) handleHandshakeRes(in Input) {
 			fmt.Println("fullresync received")
 		} else {
 			fmt.Println("rdb received")
+			s.handshakeCmd = ""
 		}
 		s.handshakeStepper <- 1
-		s.handshakeCmd = ""
 	}
 }
 
