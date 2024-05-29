@@ -41,8 +41,6 @@ func (s *Session) Start() {
 	go s.readLoop()
 	go s.writeLoop()
 	go s.worker()
-
-	s.outC <- resp.Encode("READY")
 }
 
 func (s *Session) Close() {
