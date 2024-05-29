@@ -11,6 +11,11 @@ type StoreVal struct {
 	ex        time.Time
 	canExpire bool
 }
+
+func (s *StoreVal) String() string {
+	return s.val
+}
+
 type Store struct {
 	store map[string]*StoreVal
 	mu    sync.RWMutex

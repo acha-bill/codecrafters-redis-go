@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"io"
-	"log"
 	"net"
 	"time"
 )
@@ -54,7 +53,7 @@ func (s *Session) worker() {
 	for in := range s.inC {
 		err := s.handle(in)
 		if err != nil {
-			log.Println("handle input", in, err.Error())
+			fmt.Println("handle input", in, err.Error())
 			continue
 		}
 	}
@@ -69,7 +68,7 @@ func (s *Session) handle(in resp.Value) error {
 	if !ok {
 		return fmt.Errorf("handler for cmd %s not found", cmd)
 	}
-	log.Printf("handling %s cmd with args %+v", cmd, args)
+	fmt.Printf("handling %s cmd with args %+v", cmd, args)
 
 	res := make(chan []byte)
 	defer close(res)
@@ -99,7 +98,7 @@ func (s *Session) writeLoop() {
 	for d := range s.outC {
 		_, err := s.conn.Write(d)
 		if err != nil {
-			log.Println("write to conn: ", err.Error())
+			fmt.Println("write to conn: ", err.Error())
 		}
 	}
 }
@@ -113,13 +112,13 @@ func (s *Session) readLoop() {
 			return
 		}
 		if err != nil {
-			log.Println("read: ", err.Error())
+			fmt.Println("read: ", err.Error())
 			continue
 		}
 		var val resp.Value
 		_, err = resp.Decode(buf, &val)
 		if err != nil {
-			log.Println("decode input: ", err.Error())
+			fmt.Println("decode input: ", err.Error())
 			continue
 		}
 

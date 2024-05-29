@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"strconv"
 	"strings"
@@ -74,7 +73,7 @@ func (r *Replication) Handshake() (net.Conn, error) {
 			b := make([]byte, 1024)
 			_, err := conn.Read(b)
 			if err != nil && !errors.Is(err, io.EOF) {
-				log.Println("read ", err.Error())
+				fmt.Println("read ", err.Error())
 			}
 			ch <- b
 		}
