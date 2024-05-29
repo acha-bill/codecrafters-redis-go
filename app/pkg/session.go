@@ -188,6 +188,7 @@ func (s *Session) readLoop() {
 
 		for string(buf) != "" {
 			var val resp.Value
+			fmt.Printf("decoding buf: %q\n", string(buf))
 			n1, err := resp.Decode(buf, &val)
 			buf0, buf1 := buf[0:n1], buf[n1:]
 			if err != nil {
