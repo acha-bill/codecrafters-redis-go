@@ -52,7 +52,7 @@ func main() {
 				fmt.Println("dial master: ", err.Error())
 				os.Exit(1)
 			}
-			session := pkg.NewSession(conn, handlers, repl, config).Responsive(false)
+			session := pkg.NewSession(conn, handlers, repl, config).Responsive(false).Handshake(true)
 			go session.Start()
 		}()
 	}

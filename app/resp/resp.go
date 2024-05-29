@@ -58,7 +58,7 @@ func EncodeRDB() []byte {
 	b := []byte(fmt.Sprintf("$%d", len(f)))
 	b = append(b, crlf...)
 	b = append(b, f...)
-	b = append(b, crlf...)
+	//b = append(b, crlf...)
 	return b
 }
 
@@ -108,13 +108,7 @@ func Decode(d []byte, v *Value) (n int, err error) {
 	case Array:
 		n, err = decodeArray(d, v)
 	default:
-		v.Type = Array
-		v.Val = []Value{
-			{
-				Type: BulkString,
-				Val:  "PING",
-			},
-		}
+		return 0, fmt.Errorf("invalid type. input=%q", string(d))
 	}
 	return
 }

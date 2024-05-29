@@ -12,14 +12,17 @@ import (
 
 // Session is the life cycle of a connection
 type Session struct {
-	conn             net.Conn
-	handlers         map[string]Handler
-	inC              chan resp.Value
-	outC             chan []byte
-	repl             *Replication
-	id               int64
-	responsive       bool
-	config           Config
+	conn       net.Conn
+	handlers   map[string]Handler
+	inC        chan resp.Value
+	outC       chan []byte
+	repl       *Replication
+	id         int64
+	responsive bool
+	config     Config
+
+	// handshake
+	shouldHandshake  bool
 	handshaking      bool
 	handshakeStepper chan any
 	handshakeCmd     string
@@ -48,13 +51,17 @@ func (s *Session) Responsive(v bool) *Session {
 	s.responsive = v
 	return s
 }
+func (s *Session) Handshake(v bool) *Session {
+	s.shouldHandshake = v
+	return s
+}
 
 func (s *Session) Start() {
 	go s.worker()
 	go s.readLoop()
 	go s.writeLoop()
 
-	if s.repl.Role == SlaveReplica {
+	if s.repl.Role == SlaveReplica && s.shouldHandshake {
 		go s.handshake()
 	}
 }
