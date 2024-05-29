@@ -21,6 +21,7 @@ const MaxBulkLen = 536870912
 
 var (
 	crlf                 = []byte("\r\n")
+	crlLen               = 2
 	ErrUnsupportedType   = errors.New("unsupported type")
 	ErrInvalidTerminator = errors.New("invalid terminator")
 	ErrMaxBulkLen        = errors.New("max bulk length")
@@ -117,11 +118,11 @@ func decodeSimple(d []byte, v *Value) (int, error) {
 	if len(d) < 3 {
 		return 0, fmt.Errorf("invalid simple string")
 	}
-	_, err := readNewLine(d[len(d)-2:])
+	n, err := readNewLine(d[len(d)-crlLen:])
 	if err != nil {
 		return 0, err
 	}
-	d = d[1 : len(d)-2]
+	d = d[1:n]
 	v.Val = string(d)
 	v.Type = SimpleString
 	return len(d), nil

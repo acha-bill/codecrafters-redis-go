@@ -184,7 +184,7 @@ func (s *Session) readLoop() {
 		var bufs [][]byte
 		var vals []resp.Value
 
-		fmt.Printf("received: %q\n, read=%d of %d", string(buf), n, len(buf))
+		fmt.Printf("received: %q, read=%d of %d", string(buf), n, len(buf))
 
 		for len(buf) > 0 {
 			var val resp.Value
@@ -196,9 +196,8 @@ func (s *Session) readLoop() {
 			}
 			bufs = append(bufs, buf0)
 			vals = append(vals, val)
-			buf = buf1
-
 			fmt.Printf("part received=%q: read=%d of %d\n", string(buf0), n1, len(buf))
+			buf = buf1
 		}
 
 		if len(bufs) != len(vals) {
