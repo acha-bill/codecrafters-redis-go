@@ -184,7 +184,7 @@ func (s *Session) readLoop() {
 		var bufs [][]byte
 		var vals []resp.Value
 
-		fmt.Printf("received: %q\n", string(buf))
+		fmt.Printf("received: %q\n, read=%d of %d", string(buf), n, len(buf))
 
 		for len(buf) > 0 {
 			var val resp.Value
@@ -197,13 +197,14 @@ func (s *Session) readLoop() {
 			bufs = append(bufs, buf0)
 			vals = append(vals, val)
 			buf = buf1
+
+			fmt.Printf("part received=%q: read=%d of %d\n", string(buf0), n1, len(buf))
 		}
 
 		if len(bufs) != len(vals) {
 			fmt.Println("len mismatch. want ", len(bufs), " got ", len(vals))
 		}
 		for i := range bufs {
-			fmt.Printf("part %d = %q\n", i, string(bufs[i]))
 			s.push(bufs[i], vals[i])
 			s.inC <- Input{
 				b: bufs[i],
