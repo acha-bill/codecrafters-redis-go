@@ -191,7 +191,7 @@ func (s *Session) readLoop() {
 			n1, err := resp.Decode(buf, &val)
 			if err != nil {
 				fmt.Printf("decode input: %q: %s\n", string(buf), err.Error())
-				break
+				continue
 			}
 			buf0, buf1 := buf[0:n1], buf[n1:]
 			bufs = append(bufs, buf0)
