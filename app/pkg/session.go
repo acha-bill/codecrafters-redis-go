@@ -118,9 +118,14 @@ func (s *Session) handle(in resp.Value) error {
 
 	res := make(chan []byte)
 	defer close(res)
+
+	mustRespond := map[string]any{
+		"REPLCONF": 1,
+	}
 	go func() {
 		for r := range res {
-			if s.responsive {
+			_, ok := mustRespond[cmd]
+			if s.responsive || ok {
 				s.outC <- r
 			}
 		}

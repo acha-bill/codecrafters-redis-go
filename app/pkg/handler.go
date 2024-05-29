@@ -150,6 +150,7 @@ type ReplicaConfig struct {
 type replicaConfigOpts struct {
 	listeningPort int
 	capa          string
+	getack        string
 }
 
 func NewReplicaConfig(repl *Replication) ReplicaConfig {
@@ -167,12 +168,14 @@ func (h ReplicaConfig) parse(args []resp.Value) (replicaConfigOpts, error) {
 		opts.listeningPort, _ = strconv.Atoi(args[2].Val.(string))
 	case "capa":
 		opts.capa = args[2].Val.(string)
+	case "getack":
+		opts.getack = args[2].Val.(string)
 	}
 
 	return opts, nil
 }
 func (h ReplicaConfig) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
-	_, err := h.parse(args)
+	o, err := h.parse(args)
 	if err != nil {
 		return err
 	}
@@ -183,6 +186,12 @@ func (h ReplicaConfig) Handle(sId int64, args []resp.Value, res chan<- []byte) e
 		h.repl.slaves[sId] = s
 	}
 	s.conf = true
+
+	if o.getack != "" {
+		res <- resp.Encode([]string{"REPLCONF", "ACK", "0"})
+		return nil
+	}
+
 	res <- resp.Ok
 	return nil
 }
