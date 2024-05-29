@@ -115,6 +115,7 @@ func Decode(d []byte, v *Value) (n int, err error) {
 }
 
 func decodeSimple(d []byte, v *Value) (int, error) {
+	l := len(d)
 	if len(d) < 3 {
 		return 0, fmt.Errorf("invalid simple string")
 	}
@@ -130,7 +131,7 @@ func decodeSimple(d []byte, v *Value) (int, error) {
 	fmt.Printf("%q\n", string(d))
 	v.Val = string(d)
 	v.Type = SimpleString
-	return len(d), nil
+	return l, nil
 }
 
 // decodeArray *<number-of-elements>\r\n<element-1>...<element-n>
