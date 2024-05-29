@@ -86,7 +86,10 @@ func (s *Session) handshake() {
 		s.conn.Write(resp.Encode(cmd))
 		<-s.handshakeStepper
 	}
+
+	fmt.Println("wait for rdb")
 	<-s.handshakeStepper
+	fmt.Println("rdb got")
 	s.handshaking.Store(false)
 	fmt.Println("updated handshaking: ", s.handshaking.Load())
 }
@@ -100,8 +103,10 @@ func (s *Session) handleHandshakeRes(in Input) {
 		s.handshakeStepper <- 1
 	}
 	if s.handshakeCmd == "PSYNC" {
-		if !strings.HasPrefix(r, "FULLRESYNC") {
-			fmt.Printf("psync: %q\n", string(in.b))
+		if strings.HasPrefix(r, "FULLRESYNC") {
+			fmt.Println("fullresync received")
+		} else {
+			fmt.Println("rdb received")
 		}
 		s.handshakeStepper <- 1
 	}
