@@ -125,7 +125,7 @@ func (s *Session) readLoop() {
 		}
 
 		// propagate write commands to slaves
-		go func(buf []byte, val resp.Value) {
+		if s.repl.Role == "master" {
 			cmd, _, err := resp.DecodeCmd(val)
 			if err != nil {
 				fmt.Println("decode cmd: ", err.Error())
@@ -136,11 +136,10 @@ func (s *Session) readLoop() {
 			}
 
 			fmt.Println("replicate: ", string(buf))
-
 			for _, sl := range s.repl.slaves {
 				sl.Push(buf)
 			}
-		}(buf[:], val)
+		}
 
 		s.inC <- val
 	}
