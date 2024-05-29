@@ -47,24 +47,23 @@ func main() {
 
 	if role == pkg.SlaveReplica {
 		go func() {
-			stop := make(chan any)
-			conn, err := repl.Handshake(stop)
+			conn, err := repl.Dial()
 			if err != nil {
-				fmt.Println("handshake with master: ", err.Error())
+				fmt.Println("dial master: ", err.Error())
 				os.Exit(1)
 			}
-			stop <- 1
-			session := pkg.NewSession(conn, handlers, repl).Responsive(false)
+			session := pkg.NewSession(conn, handlers, repl, config).Responsive(false)
 			go session.Start()
 		}()
 	}
+
 	for {
 		conn, err := l.Accept()
 		if err != nil {
 			log.Fatal("Error accepting connection: ", err.Error())
 		}
 
-		session := pkg.NewSession(conn, handlers, repl)
+		session := pkg.NewSession(conn, handlers, repl, config)
 		go session.Start()
 	}
 }

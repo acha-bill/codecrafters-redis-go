@@ -6,6 +6,7 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"io"
 	"net"
+	"strconv"
 	"time"
 )
 
@@ -18,9 +19,10 @@ type Session struct {
 	repl       *Replication
 	id         int64
 	responsive bool
+	config     Config
 }
 
-func NewSession(conn net.Conn, handlers map[string]Handler, repl *Replication) *Session {
+func NewSession(conn net.Conn, handlers map[string]Handler, repl *Replication, config Config) *Session {
 	return &Session{
 		conn:       conn,
 		handlers:   handlers,
@@ -29,6 +31,7 @@ func NewSession(conn net.Conn, handlers map[string]Handler, repl *Replication) *
 		repl:       repl,
 		id:         time.Now().UnixNano(),
 		responsive: true,
+		config:     config,
 	}
 }
 
@@ -41,6 +44,14 @@ func (s *Session) Start() {
 	go s.worker()
 	go s.readLoop()
 	go s.writeLoop()
+
+	// handshake
+	if s.repl.Role == SlaveReplica {
+		s.conn.Write(resp.Encode([]string{"PING"}))
+		s.conn.Write(resp.Encode([]string{"REPLCONF", "listening-port", strconv.Itoa(s.config.Port)}))
+		s.conn.Write(resp.Encode([]string{"REPLCONF", "capa", "psync2"}))
+		s.conn.Write(resp.Encode([]string{"PSYNC", "?", "-1"}))
+	}
 }
 
 func (s *Session) Close() {
