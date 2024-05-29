@@ -7,6 +7,7 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"io"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -54,11 +55,6 @@ func (r *Replica) Start() {
 	for r.conn == nil {
 	}
 
-	fmt.Println("replica is ready. pending commands...")
-	for _, v := range r.cmds {
-		fmt.Println(v)
-	}
-
 	for v := range r.ch {
 		_, err := r.conn.Write(v)
 		if err != nil {
@@ -85,7 +81,7 @@ func NewReplication(role ReplicaType, of string, config Config) *Replication {
 	}
 }
 
-func (r *Replication) Handshake() (net.Conn, error) {
+func (r *Replication) Handshake(stop chan any) (net.Conn, error) {
 	master := strings.Split(r.Of, " ")
 	if len(master) < 2 {
 		return nil, ErrInvalidMaster
@@ -102,17 +98,25 @@ func (r *Replication) Handshake() (net.Conn, error) {
 	}
 
 	ch := make(chan []byte, 1)
+	pr, pw, _ := os.Pipe()
 	go func() {
 		for {
 			b := make([]byte, 1024)
-			n, err := conn.Read(b)
+			mr := io.MultiReader(conn, pr)
+			n, err := mr.Read(b)
 			if err != nil && !errors.Is(err, io.EOF) {
 				fmt.Println("read ", err.Error())
 			}
 			b = b[:n]
-			fmt.Printf("read: %q\n", string(b))
 			ch <- b
+
 		}
+	}()
+
+	go func() {
+		<-stop
+		pw.Close()
+		fmt.Println("handshake done")
 	}()
 
 	_, err = conn.Write(resp.Encode([]string{"PING"}))
@@ -120,20 +124,17 @@ func (r *Replication) Handshake() (net.Conn, error) {
 		return nil, fmt.Errorf("write ping: %w", err)
 	}
 	res := <-ch
-	fmt.Printf("got %q, want %q\n", string(res), string(resp.Encode("PONG")))
 	if !bytes.Equal(res, resp.Encode("PONG")) {
 		return nil, fmt.Errorf("expected PONG")
 	}
 
-	s := resp.Encode([]string{"REPLCONF", "listening-port", strconv.Itoa(r.config.Port)})
-	fmt.Printf("sending: %q\n", string(s))
-	_, err = conn.Write(s)
+	_, err = conn.Write(resp.Encode([]string{"REPLCONF", "listening-port", strconv.Itoa(r.config.Port)}))
 	if err != nil {
 		return nil, fmt.Errorf("write: %w", err)
 	}
 
 	res = <-ch
-	if !bytes.Equal(res, resp.Encode("OK")) {
+	if !bytes.Equal(res, resp.EncodeSimple("OK")) {
 		return nil, fmt.Errorf("expected ok. got %s", string(res))
 	}
 
@@ -143,7 +144,7 @@ func (r *Replication) Handshake() (net.Conn, error) {
 	}
 
 	res = <-ch
-	if !bytes.Equal(res, resp.Encode("PONG")) {
+	if !bytes.Equal(res, resp.EncodeSimple("OK")) {
 		return nil, fmt.Errorf("expected ok. got %s", string(res))
 	}
 

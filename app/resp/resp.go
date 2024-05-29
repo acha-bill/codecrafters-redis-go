@@ -20,14 +20,14 @@ const (
 const MaxBulkLen = 536870912
 
 var (
-	crlf                 = []byte("\\r\\n")
+	crlf                 = []byte("\r\n")
 	ErrUnsupportedType   = errors.New("unsupported type")
 	ErrInvalidTerminator = errors.New("invalid terminator")
 	ErrMaxBulkLen        = errors.New("max bulk length")
 
-	Nil  = []byte("$-1\\r\\n")
-	Ok   = []byte("+OK\\r\\n")
-	Pong = []byte("+PONG\\r\\n")
+	Nil  = []byte("$-1\r\n")
+	Ok   = []byte("+OK\r\n")
+	Pong = []byte("+PONG\r\n")
 )
 
 type Value struct {
@@ -221,8 +221,8 @@ func readLength(d []byte) (int, int, error) {
 }
 
 func readNewLine(d []byte) (int, error) {
-	if !bytes.Equal(d[0:4], crlf) {
-		return 0, fmt.Errorf("%v, %v, %w", d[0:4], crlf, ErrInvalidTerminator)
+	if !bytes.Equal(d[0:2], crlf) {
+		return 0, fmt.Errorf("%v, %v, %w", d[0:2], crlf, ErrInvalidTerminator)
 	}
-	return 4, nil
+	return 2, nil
 }

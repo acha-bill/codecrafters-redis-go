@@ -104,19 +104,18 @@ func (s *Session) writeLoop() {
 }
 
 func (s *Session) readLoop() {
-	buf := make([]byte, 1024)
 	for {
+		buf := make([]byte, 1024)
 		n, err := s.conn.Read(buf)
 		if errors.Is(err, io.EOF) {
 			s.Close()
 			return
 		}
 		if err != nil {
-			fmt.Println("read: ", err.Error())
+			fmt.Println("session read: ", err.Error())
 			continue
 		}
 		buf = buf[:n]
-		fmt.Printf("read: %q\n", string(buf))
 		var val resp.Value
 		_, err = resp.Decode(buf, &val)
 		if err != nil {

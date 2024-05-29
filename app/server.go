@@ -3,11 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/codecrafters-io/redis-starter-go/app/pkg"
 	"log"
 	"net"
 	"os"
-
-	"github.com/codecrafters-io/redis-starter-go/app/pkg"
 )
 
 var (
@@ -16,7 +15,6 @@ var (
 )
 
 func main() {
-	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
 
 	flag.IntVar(&port, "port", 6379, "port number")
@@ -49,18 +47,17 @@ func main() {
 
 	if role == pkg.SlaveReplica {
 		go func() {
-			fmt.Println("starting handshake")
-			conn, err := repl.Handshake()
+			stop := make(chan any)
+			conn, err := repl.Handshake(stop)
 			if err != nil {
 				fmt.Println("handshake with master: ", err.Error())
 				os.Exit(1)
 			}
-			fmt.Println("handshake done")
+			stop <- 1
 			session := pkg.NewSession(conn, handlers, repl).Responsive(false)
 			go session.Start()
 		}()
 	}
-
 	for {
 		conn, err := l.Accept()
 		if err != nil {
