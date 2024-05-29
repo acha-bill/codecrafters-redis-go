@@ -182,10 +182,7 @@ func decodeBulk(d []byte, v *Value) (int, error) {
 		return 0, err
 	}
 	d = d[n:]
-	n, err = readNewLine(d)
-	if err != nil {
-		return 0, err
-	}
+	n, _ = readNewLine(d) // optional last terminator
 	d = d[n:]
 	v.Val = s
 	return n0 - len(d), nil
