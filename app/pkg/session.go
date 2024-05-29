@@ -91,6 +91,7 @@ func (s *Session) handshake() {
 }
 
 func (s *Session) handleHandshakeRes(in Input) {
+	fmt.Printf("input: %q\n", string(in.b))
 	r := strings.ToUpper(in.v.Val.(string))
 	if (s.handshakeCmd == "PING" && r == "PONG") ||
 		(s.handshakeCmd == "REPLCONF" && r == "OK") {
@@ -102,6 +103,7 @@ func (s *Session) handleHandshakeRes(in Input) {
 		}
 		s.handshakeStepper <- 1
 	}
+	s.handshakeCmd = ""
 }
 
 func (s *Session) Close() {
