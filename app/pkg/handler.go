@@ -147,7 +147,7 @@ func (h Info) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 
 type ReplicaConfig struct {
 	repl *Replication
-	ack  *atomic.Int32
+	ack  *atomic.Int64
 }
 type replicaConfigOpts struct {
 	listeningPort int
@@ -155,7 +155,7 @@ type replicaConfigOpts struct {
 	getack        string
 }
 
-func NewReplicaConfig(repl *Replication, ack *atomic.Int32) ReplicaConfig {
+func NewReplicaConfig(repl *Replication, ack *atomic.Int64) ReplicaConfig {
 	return ReplicaConfig{repl: repl, ack: ack}
 }
 
@@ -190,7 +190,7 @@ func (h ReplicaConfig) Handle(sId int64, args []resp.Value, res chan<- []byte) e
 	s.conf = true
 
 	if o.getack != "" {
-		res <- resp.Encode([]string{"REPLCONF", "ACK", string(h.ack.Load())})
+		res <- resp.Encode([]string{"REPLCONF", "ACK", strconv.FormatInt(h.ack.Load(), 32)})
 		return nil
 	}
 

@@ -36,7 +36,7 @@ func main() {
 		role = pkg.SlaveReplica
 	}
 	repl := pkg.NewReplication(role, replicaOf, config)
-	ack := &atomic.Int32{}
+	ack := &atomic.Int64{}
 	handlers := map[string]pkg.Handler{
 		"PING":     pkg.Ping{},
 		"ECHO":     pkg.Echo{},

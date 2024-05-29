@@ -34,10 +34,10 @@ type Session struct {
 	handshakeCmd     string
 
 	// ack
-	ack *atomic.Int32
+	ack *atomic.Int64
 }
 
-func NewSession(conn net.Conn, handlers map[string]Handler, repl *Replication, config Config, ack *atomic.Int32) *Session {
+func NewSession(conn net.Conn, handlers map[string]Handler, repl *Replication, config Config, ack *atomic.Int64) *Session {
 	return &Session{
 		conn:             conn,
 		handlers:         handlers,
@@ -147,7 +147,7 @@ func (s *Session) handle(in Input) error {
 	}
 
 	// update ack
-	s.ack.Add(int32(len(in.b)))
+	s.ack.Add(int64(len(in.b)))
 
 	// setup slave conn
 	sl, ok := s.repl.slaves[s.id]
@@ -188,21 +188,20 @@ func (s *Session) readLoop() {
 
 		for string(buf) != "" {
 			var val resp.Value
-			fmt.Printf("decoding buf: %q\n", string(buf))
 			n1, err := resp.Decode(buf, &val)
-			buf0, buf1 := buf[0:n1], buf[n1:]
 			if err != nil {
-				fmt.Printf("decode input: %q: %s\n", string(buf0), err.Error())
+				fmt.Printf("decode input: %q: %s\n", string(buf), err.Error())
 				break
 			}
+			buf0, buf1 := buf[0:n1], buf[n1:]
 			bufs = append(bufs, buf0)
 			vals = append(vals, val)
-			fmt.Printf("part received=%q: read=%d of %d\n", string(buf0), n1, len(buf))
 			buf = buf1
 		}
 
 		if len(bufs) != len(vals) {
 			fmt.Println("len mismatch. want ", len(bufs), " got ", len(vals))
+			continue
 		}
 		for i := range bufs {
 			s.push(bufs[i], vals[i])
