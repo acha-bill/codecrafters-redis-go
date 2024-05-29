@@ -112,7 +112,6 @@ func (s *Session) handle(in resp.Value) error {
 	if !ok {
 		return fmt.Errorf("handler for cmd %s not found", cmd)
 	}
-	fmt.Printf("handling %s cmd with args %+v\n", cmd, args)
 
 	res := make(chan []byte)
 	defer close(res)
@@ -161,10 +160,9 @@ func (s *Session) readLoop() {
 		}
 		buf = buf[:n]
 		var val resp.Value
-		fmt.Printf("read: %q\n", string(buf))
 		_, err = resp.Decode(buf, &val)
 		if err != nil {
-			fmt.Println("decode input: ", err.Error())
+			fmt.Printf("decode input: %q: %s", string(buf), err.Error())
 			continue
 		}
 
