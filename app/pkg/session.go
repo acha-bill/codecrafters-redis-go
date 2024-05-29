@@ -184,8 +184,6 @@ func (s *Session) readLoop() {
 		var bufs [][]byte
 		var vals []resp.Value
 
-		fmt.Printf("received: %q, read=%d of %d\n", string(buf), n, len(buf))
-
 		for string(buf) != "" {
 			var val resp.Value
 			n1, err := resp.Decode(buf, &val)
