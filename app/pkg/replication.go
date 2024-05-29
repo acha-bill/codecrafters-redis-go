@@ -32,7 +32,8 @@ type Replica struct {
 	handshake bool
 	conn      net.Conn
 
-	ch chan []byte
+	ch   chan []byte
+	cmds []string
 }
 
 func NewReplica(id int64) *Replica {
@@ -46,12 +47,17 @@ func NewReplica(id int64) *Replica {
 }
 
 func (r *Replica) Push(b []byte) {
-	fmt.Println("pushing cmd to buf: ", string(b))
+	r.cmds = append(r.cmds, fmt.Sprintf("%q", string(b)))
 	r.ch <- b
 }
 
 func (r *Replica) Start() {
 	for r.conn == nil {
+	}
+
+	fmt.Println("replica is ready. pending commands...")
+	for _, v := range r.cmds {
+		fmt.Println(v)
 	}
 
 	for v := range r.ch {
