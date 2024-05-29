@@ -45,7 +45,7 @@ func main() {
 		"INFO":     pkg.NewInfo(repl),
 		"REPLCONF": pkg.NewReplicaConfig(repl, ack),
 		"PSYNC":    pkg.NewPsync(repl),
-		"WAIT":     pkg.Wait{},
+		"WAIT":     pkg.NewWait(repl),
 	}
 
 	if role == pkg.SlaveReplica {

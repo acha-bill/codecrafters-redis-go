@@ -229,9 +229,14 @@ func (h Psync) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 	return nil
 }
 
-type Wait struct{}
+type Wait struct {
+	repl *Replication
+}
 
+func NewWait(repl *Replication) Wait {
+	return Wait{repl: repl}
+}
 func (h Wait) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
-	res <- resp.Encode(0)
+	res <- resp.Encode(len(h.repl.slaves))
 	return nil
 }
