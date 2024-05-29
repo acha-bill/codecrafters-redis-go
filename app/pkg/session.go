@@ -88,10 +88,12 @@ func (s *Session) handshake() {
 	}
 	<-s.handshakeStepper
 	s.handshaking.Store(false)
+	fmt.Println("updated handshaking: ", s.handshaking.Load())
 }
 
 func (s *Session) handleHandshakeRes(in Input) {
 	fmt.Printf("input: %q\n", string(in.b))
+	fmt.Println("handshaking: ", s.handshaking.Load())
 	r := strings.ToUpper(in.v.Val.(string))
 	if (s.handshakeCmd == "PING" && r == "PONG") ||
 		(s.handshakeCmd == "REPLCONF" && r == "OK") {
@@ -114,6 +116,7 @@ func (s *Session) Close() {
 
 func (s *Session) worker() {
 	for in := range s.inC {
+		fmt.Println("handshaking worker: ", s.handshaking.Load())
 		if s.handshaking.Load() {
 			s.handleHandshakeRes(in)
 			continue
