@@ -6,6 +6,7 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -153,7 +154,7 @@ type replicaConfigOpts struct {
 	getack        string
 }
 
-func NewReplicaConfig(repl *Replication) ReplicaConfig {
+func NewReplicaConfig(repl *Replication, ack *atomic.Int64) ReplicaConfig {
 	return ReplicaConfig{repl: repl}
 }
 

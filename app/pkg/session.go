@@ -7,14 +7,20 @@ import (
 	"io"
 	"net"
 	"strconv"
+	"sync/atomic"
 	"time"
 )
+
+type Input struct {
+	b []byte
+	v resp.Value
+}
 
 // Session is the life cycle of a connection
 type Session struct {
 	conn       net.Conn
 	handlers   map[string]Handler
-	inC        chan resp.Value
+	inC        chan Input
 	outC       chan []byte
 	repl       *Replication
 	id         int64
@@ -26,19 +32,23 @@ type Session struct {
 	handshaking      bool
 	handshakeStepper chan any
 	handshakeCmd     string
+
+	// ack
+	ack *atomic.Int64
 }
 
-func NewSession(conn net.Conn, handlers map[string]Handler, repl *Replication, config Config) *Session {
+func NewSession(conn net.Conn, handlers map[string]Handler, repl *Replication, config Config, ack *atomic.Int64) *Session {
 	return &Session{
 		conn:             conn,
 		handlers:         handlers,
-		inC:              make(chan resp.Value),
+		inC:              make(chan Input),
 		outC:             make(chan []byte),
 		repl:             repl,
 		id:               time.Now().UnixNano(),
 		responsive:       true,
 		config:           config,
 		handshakeStepper: make(chan any),
+		ack:              ack,
 	}
 }
 
@@ -77,8 +87,8 @@ func (s *Session) handshake() {
 	s.handshaking = false
 }
 
-func (s *Session) handleHandshakeRes(v resp.Value) {
-	r := v.Val.(string)
+func (s *Session) handleHandshakeRes(in Input) {
+	r := in.v.Val.(string)
 	if (s.handshakeCmd == "PING" && r == "PONG") ||
 		(s.handshakeCmd == "REPLCONF" && r == "OK") ||
 		(s.handshakeCmd == "PSYNC") {
@@ -106,8 +116,8 @@ func (s *Session) worker() {
 	}
 }
 
-func (s *Session) handle(in resp.Value) error {
-	cmd, args, err := resp.DecodeCmd(in)
+func (s *Session) handle(in Input) error {
+	cmd, args, err := resp.DecodeCmd(in.v)
 	if err != nil {
 		return err
 	}
@@ -135,6 +145,9 @@ func (s *Session) handle(in resp.Value) error {
 	if err != nil {
 		return err
 	}
+
+	// update ack
+	s.ack.Add(int64(len(in.b)))
 
 	// setup slave conn
 	sl, ok := s.repl.slaves[s.id]
@@ -189,7 +202,10 @@ func (s *Session) readLoop() {
 		}
 		for i := range bufs {
 			s.push(bufs[i], vals[i])
-			s.inC <- vals[i]
+			s.inC <- Input{
+				b: bufs[i],
+				v: vals[i],
+			}
 		}
 	}
 }

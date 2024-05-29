@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"sync/atomic"
 )
 
 var (
@@ -35,13 +36,14 @@ func main() {
 		role = pkg.SlaveReplica
 	}
 	repl := pkg.NewReplication(role, replicaOf, config)
+	ack := &atomic.Int64{}
 	handlers := map[string]pkg.Handler{
 		"PING":     pkg.Ping{},
 		"ECHO":     pkg.Echo{},
 		"SET":      pkg.NewSet(store),
 		"GET":      pkg.NewGet(store),
 		"INFO":     pkg.NewInfo(repl),
-		"REPLCONF": pkg.NewReplicaConfig(repl),
+		"REPLCONF": pkg.NewReplicaConfig(repl, ack),
 		"PSYNC":    pkg.NewPsync(repl),
 	}
 
@@ -52,7 +54,7 @@ func main() {
 				fmt.Println("dial master: ", err.Error())
 				os.Exit(1)
 			}
-			session := pkg.NewSession(conn, handlers, repl, config).Responsive(false).Handshake(true)
+			session := pkg.NewSession(conn, handlers, repl, config, ack).Responsive(false).Handshake(true)
 			go session.Start()
 		}()
 	}
@@ -63,7 +65,7 @@ func main() {
 			log.Fatal("Error accepting connection: ", err.Error())
 		}
 
-		session := pkg.NewSession(conn, handlers, repl, config)
+		session := pkg.NewSession(conn, handlers, repl, config, ack)
 		go session.Start()
 	}
 }
