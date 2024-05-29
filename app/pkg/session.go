@@ -167,17 +167,30 @@ func (s *Session) readLoop() {
 			continue
 		}
 		buf = buf[:n]
-		var val resp.Value
-		_, err = resp.Decode(buf, &val)
-		if err != nil {
-			fmt.Printf("decode input: %q: %s\n", string(buf), err.Error())
-			continue
+
+		var bufs [][]byte
+		var vals []resp.Value
+
+		for len(buf) > 0 {
+			var val resp.Value
+			n1, err := resp.Decode(buf, &val)
+			buf0, buf1 := buf[0:n1], buf[n1:]
+			if err != nil {
+				fmt.Printf("decode input: %q: %s\n", string(buf0), err.Error())
+				break
+			}
+			bufs = append(bufs, buf0)
+			vals = append(vals, val)
+			buf = buf1
 		}
 
-		s.push(buf[:], val)
-
-		fmt.Printf("received: %q\n", string(buf))
-		s.inC <- val
+		if len(bufs) != len(vals) {
+			fmt.Println("len mismatch. want ", len(bufs), " got ", len(vals))
+		}
+		for i := range bufs {
+			s.push(bufs[i], vals[i])
+			s.inC <- vals[i]
+		}
 	}
 }
 
