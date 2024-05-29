@@ -189,6 +189,7 @@ func (h ReplicaConfig) Handle(sId int64, args []resp.Value, res chan<- []byte) e
 	}
 	s.conf = true
 
+	fmt.Println("ack is ", h.ack.Load())
 	if o.getack != "" {
 		res <- resp.Encode([]string{"REPLCONF", "ACK", strconv.FormatInt(h.ack.Load(), 32)})
 		return nil
