@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"fmt"
 	"sync"
 	"time"
 )
@@ -42,4 +43,10 @@ func (s *Store) Set(k string, v string, px time.Duration) {
 		ex:        time.Now().Add(px),
 		canExpire: px > 0,
 	}
+}
+
+func (s *Store) Print() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return fmt.Sprintf("%+v", s.store)
 }
