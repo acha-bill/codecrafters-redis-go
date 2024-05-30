@@ -3,7 +3,6 @@ package pkg
 import (
 	"errors"
 	"fmt"
-	"github.com/codecrafters-io/redis-starter-go/app/rdb"
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"path"
 	"strconv"
@@ -345,12 +344,14 @@ func NewKeys(c Config) Keys {
 	return Keys{conf: c}
 }
 func (h Keys) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
-	r, err := rdb.Read(path.Join(h.conf.DbDir, h.conf.DbFileName))
+	r, err := readDDB(path.Join(h.conf.DbDir, h.conf.DbFileName))
 	if err != nil {
 		return err
 	}
-	if len(r) > 0 {
-		res <- resp.Encode([]string{string(r[0])})
+	for k := range r {
+		res <- resp.Encode([]string{k})
+		return nil
 	}
+
 	return nil
 }
