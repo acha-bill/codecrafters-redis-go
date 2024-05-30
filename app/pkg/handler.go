@@ -287,7 +287,7 @@ L:
 	for {
 		c = 0
 		for _, s := range h.repl.slaves {
-			if int64(s.ack) == h.ack.Load() {
+			if int64(s.ack) >= h.ack.Load() {
 				c++
 			}
 		}
