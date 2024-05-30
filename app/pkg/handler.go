@@ -323,13 +323,14 @@ func (h Conf) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 	}
 
 	var v string
-	switch args[2].Val.(string) {
+	p := args[2].Val.(string)
+	switch p {
 	case "dir":
 		v = h.c.DbDir
 	case "dbfilename":
 		v = h.c.DbFileName
 	}
 
-	res <- resp.Encode(v)
+	res <- resp.Encode([]string{p, v})
 	return nil
 }
