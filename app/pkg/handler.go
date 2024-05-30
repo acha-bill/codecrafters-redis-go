@@ -309,3 +309,27 @@ L:
 	res <- resp.Encode(c)
 	return nil
 }
+
+type Conf struct {
+	c Config
+}
+
+func NewConf(c Config) Conf {
+	return Conf{c: c}
+}
+func (h Conf) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
+	if len(args) < 3 {
+		return ErrInvalidCmd
+	}
+
+	var v string
+	switch args[2].Val.(string) {
+	case "dir":
+		v = h.c.DbDir
+	case "dbfilename":
+		v = h.c.DbFileName
+	}
+
+	res <- resp.Encode(v)
+	return nil
+}

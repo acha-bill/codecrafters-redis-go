@@ -11,8 +11,10 @@ import (
 )
 
 var (
-	port      int
-	replicaOf string
+	port       int
+	replicaOf  string
+	dbDir      string
+	dbFileName string
 )
 
 func main() {
@@ -20,9 +22,11 @@ func main() {
 
 	flag.IntVar(&port, "port", 6379, "port number")
 	flag.StringVar(&replicaOf, "replicaof", "", "the master to follow")
+	flag.StringVar(&dbDir, "dir", "./", "db dir")
+	flag.StringVar(&dbFileName, "dbfilename", "dump.rdb", "db file name")
 	flag.Parse()
 
-	config := pkg.Config{Port: port}
+	config := pkg.Config{Port: port, DbFileName: dbFileName, DbDir: dbDir}
 
 	l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", config.Port))
 	if err != nil {
@@ -37,12 +41,13 @@ func main() {
 	}
 	repl := pkg.NewReplication(role, replicaOf, config)
 	handlers := map[string]pkg.Handler{
-		"PING":  pkg.Ping{},
-		"ECHO":  pkg.Echo{},
-		"SET":   pkg.NewSet(store),
-		"GET":   pkg.NewGet(store),
-		"INFO":  pkg.NewInfo(repl),
-		"PSYNC": pkg.NewPsync(repl),
+		"PING":   pkg.Ping{},
+		"ECHO":   pkg.Echo{},
+		"SET":    pkg.NewSet(store),
+		"GET":    pkg.NewGet(store),
+		"INFO":   pkg.NewInfo(repl),
+		"PSYNC":  pkg.NewPsync(repl),
+		"CONFIG": pkg.NewConf(config),
 	}
 
 	ack0, ack1 := &atomic.Int64{}, &atomic.Int64{}

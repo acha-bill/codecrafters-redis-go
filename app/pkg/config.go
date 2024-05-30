@@ -1,5 +1,7 @@
 package pkg
 
 type Config struct {
-	Port int
+	Port       int
+	DbDir      string
+	DbFileName string
 }
