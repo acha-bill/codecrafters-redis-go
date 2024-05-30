@@ -133,18 +133,16 @@ L:
 }
 
 func readData(r *bufio.Reader, expiry time.Duration) error {
-	k, err := r.ReadByte()
+	_, err := r.ReadByte()
 	if err != nil {
 		return err
 	}
-	fmt.Println("reading value of type ", k)
 	key, _, err := decode(r)
 	var v Value
 	err = decodeValue(r, &v)
 	if err != nil {
 		return err
 	}
-	fmt.Println("data = ", string(key), v.Value)
 	data[string(key)] = rdbDataVal{
 		v:  v.Value.(string),
 		ex: expiry,
@@ -174,9 +172,8 @@ func readFb(r *bufio.Reader) error {
 	//}
 	//fmt.Println("expiry length: ", string(d), t)
 	//return nil
-	b0, _ := r.ReadByte()
-	b1, _ := r.ReadByte()
-	fmt.Println("fb: ", string(b0), string(b1))
+	r.ReadByte()
+	r.ReadByte()
 	return nil
 }
 
@@ -186,7 +183,7 @@ func readFd(r *bufio.Reader) error {
 	if err != nil {
 		return err
 	}
-	ex := binary.LittleEndian.Uint16(buf)
+	ex := binary.LittleEndian.Uint32(buf)
 	expiry := time.Duration(ex) * time.Second
 	fmt.Println("seconds expiry: ", expiry)
 	err = readData(r, expiry)
@@ -197,12 +194,12 @@ func readFd(r *bufio.Reader) error {
 }
 
 func readFc(r *bufio.Reader) error {
-	buf := make([]byte, 4)
+	buf := make([]byte, 8)
 	_, err := r.Read(buf)
 	if err != nil {
 		return err
 	}
-	ex := binary.LittleEndian.Uint32(buf)
+	ex := binary.LittleEndian.Uint64(buf)
 	expiry := time.Duration(ex) * time.Millisecond
 	fmt.Println("milliseconds expiry: ", expiry)
 	err = readData(r, expiry)
