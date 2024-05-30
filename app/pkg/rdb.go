@@ -32,6 +32,8 @@ const (
 var data map[string]string
 
 func readDDB(path string) (map[string]string, error) {
+	data = make(map[string]string)
+
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
