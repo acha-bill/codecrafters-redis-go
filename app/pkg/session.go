@@ -160,13 +160,6 @@ func (s *Session) handle(in Input) error {
 		return err
 	}
 
-	// update ack
-	//if cmd == "SET" {
-	s.ack.Add(int64(len(in.b)))
-	fmt.Printf("added %d to ack. val=%d, source=%q\n", len(in.b), s.ack.Load(), string(in.b))
-
-	//}
-
 	// setup slave conn
 	sl, ok := s.repl.slaves[s.id]
 	if ok && sl.handshake && sl.conn == nil {
@@ -234,6 +227,7 @@ func parseInputs(buf []byte) ([][]byte, []resp.Value) {
 
 func (s *Session) push(buf []byte, val resp.Value) {
 	if s.repl.Role == MasterReplica {
+
 		cmd, _, err := resp.DecodeCmd(val)
 		if err != nil {
 			fmt.Println("decode cmd: ", err.Error())
@@ -242,6 +236,9 @@ func (s *Session) push(buf []byte, val resp.Value) {
 		if cmd != "SET" {
 			return
 		}
+
+		s.ack.Add(int64(len(buf)))
+		fmt.Printf("added %d to ack. val=%d, source=%q\n", len(buf), s.ack.Load(), string(buf))
 
 		for _, sl := range s.repl.slaves {
 			sl.Push(buf)
