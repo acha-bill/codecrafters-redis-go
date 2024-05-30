@@ -88,8 +88,6 @@ func (s *Session) handshake() {
 	}
 
 	<-s.handshakeStepper
-	s.handshaking.Store(false)
-	fmt.Println("hanshake updated: ", s.handshaking.Load())
 }
 
 func (s *Session) handleHandshakeRes(in Input) {
@@ -101,6 +99,7 @@ func (s *Session) handleHandshakeRes(in Input) {
 	if s.handshakeCmd == "PSYNC" {
 		if !strings.HasPrefix(r, "FULLRESYNC") {
 			fmt.Println("rdb received")
+			s.handshaking.Store(false)
 			s.handshakeCmd = ""
 		}
 		s.handshakeStepper <- 1
