@@ -174,8 +174,9 @@ func readFb(r *bufio.Reader) error {
 	//}
 	//fmt.Println("expiry length: ", string(d), t)
 	//return nil
-	r.ReadByte()
-	r.ReadByte()
+	b0, _ := r.ReadByte()
+	b1, _ := r.ReadByte()
+	fmt.Println("fb: ", string(b0), string(b1))
 	return nil
 }
 
@@ -185,6 +186,7 @@ func readFd(r *bufio.Reader) error {
 		return err
 	}
 	expiry := time.Duration(b) * time.Second
+	fmt.Println("seconds expiry: ", expiry)
 	err = readData(r, expiry)
 	if err != nil {
 		return err
@@ -198,7 +200,7 @@ func readFc(r *bufio.Reader) error {
 		return err
 	}
 	expiry := time.Duration(b) * time.Millisecond
-	fmt.Println(expiry)
+	fmt.Println("milliseconds expiry: ", expiry)
 	err = readData(r, expiry)
 	if err != nil {
 		return err
