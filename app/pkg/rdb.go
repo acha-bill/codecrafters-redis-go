@@ -29,10 +29,15 @@ const (
 	Int32String
 )
 
-var data map[string]string
+type rdbDataVal struct {
+	v  string
+	ex time.Duration
+}
 
-func readDDB(path string) (map[string]string, error) {
-	data = make(map[string]string)
+var data map[string]rdbDataVal
+
+func readDDB(path string) (map[string]rdbDataVal, error) {
+	data = make(map[string]rdbDataVal)
 
 	f, err := os.Open(path)
 	if err != nil {
@@ -118,7 +123,7 @@ L:
 			if err != nil {
 				return nil, fmt.Errorf("unread")
 			}
-			err = readData(r)
+			err = readData(r, 0)
 			if err != nil {
 				return nil, fmt.Errorf("read data: %w", err)
 			}
@@ -128,7 +133,7 @@ L:
 	return data, nil
 }
 
-func readData(r *bufio.Reader) error {
+func readData(r *bufio.Reader, expiry time.Duration) error {
 	k, err := r.ReadByte()
 	if err != nil {
 		return err
@@ -141,7 +146,10 @@ func readData(r *bufio.Reader) error {
 		return err
 	}
 	fmt.Println("data = ", string(key), v.Value)
-	data[string(key)] = v.Value.(string)
+	data[string(key)] = rdbDataVal{
+		v:  v.Value.(string),
+		ex: expiry,
+	}
 	return nil
 }
 
@@ -178,8 +186,7 @@ func readFd(r *bufio.Reader) error {
 		return err
 	}
 	expiry := time.Duration(b) * time.Second
-	fmt.Println(expiry)
-	err = readData(r)
+	err = readData(r, expiry)
 	if err != nil {
 		return err
 	}
@@ -193,7 +200,7 @@ func readFc(r *bufio.Reader) error {
 	}
 	expiry := time.Duration(b) * time.Millisecond
 	fmt.Println(expiry)
-	err = readData(r)
+	err = readData(r, expiry)
 	if err != nil {
 		return err
 	}
