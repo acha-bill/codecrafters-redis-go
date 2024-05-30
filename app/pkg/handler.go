@@ -274,7 +274,6 @@ func (h Wait) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 	for _, s := range h.repl.slaves {
 		b := resp.Encode([]string{"REPLCONF", "GETACK", "*"})
 		s.conn.Write(b)
-		h.ack.Add(int64(len(b)))
 	}
 
 	//time.Sleep(1 * time.Second)
@@ -288,7 +287,6 @@ L:
 	for {
 		c = 0
 		for _, s := range h.repl.slaves {
-			fmt.Printf("master ack: %d, slave id=%d, ack=%d\n", h.ack.Load(), s.sId, s.ack)
 			if int64(s.ack) == h.ack.Load() {
 				c++
 			}
