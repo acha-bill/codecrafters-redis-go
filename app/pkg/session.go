@@ -159,11 +159,11 @@ func (s *Session) handle(in Input) error {
 		return err
 	}
 
-	// a master connection
-	//if s.shouldHandshake {
-	//	s.ack.Add(int64(len(in.b)))
-	//	fmt.Printf("added %d to ack from master. val=%d, source=%q\n", len(in.b), s.ack.Load(), string(in.b))
-	//}
+	//a master connection
+	if s.shouldHandshake {
+		s.ack.Add(int64(len(in.b)))
+		fmt.Printf("added %d to ack from master. val=%d, source=%q\n", len(in.b), s.ack.Load(), string(in.b))
+	}
 
 	// setup slave conn
 	sl, ok := s.repl.slaves[s.id]
