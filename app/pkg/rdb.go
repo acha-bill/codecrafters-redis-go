@@ -29,15 +29,10 @@ const (
 	Int32String
 )
 
-type rdbDataVal struct {
-	v  string
-	ex time.Duration
-}
+var data map[string]StoreVal
 
-var data map[string]rdbDataVal
-
-func readDDB(path string) (map[string]rdbDataVal, error) {
-	data = make(map[string]rdbDataVal)
+func readDDB(path string) (map[string]StoreVal, error) {
+	data = make(map[string]StoreVal)
 
 	f, err := os.Open(path)
 	if err != nil {
@@ -122,7 +117,7 @@ L:
 			if err != nil {
 				return nil, fmt.Errorf("unread")
 			}
-			err = readData(r, 0)
+			err = readData(r, time.Time{})
 			if err != nil {
 				return nil, fmt.Errorf("read data: %w", err)
 			}
@@ -132,7 +127,7 @@ L:
 	return data, nil
 }
 
-func readData(r *bufio.Reader, expiry time.Duration) error {
+func readData(r *bufio.Reader, expiry time.Time) error {
 	_, err := r.ReadByte()
 	if err != nil {
 		return err
@@ -143,9 +138,10 @@ func readData(r *bufio.Reader, expiry time.Duration) error {
 	if err != nil {
 		return err
 	}
-	data[string(key)] = rdbDataVal{
-		v:  v.Value.(string),
-		ex: expiry,
+	data[string(key)] = StoreVal{
+		val:       v.Value.(string),
+		ex:        expiry,
+		canExpire: !expiry.Equal(time.Time{}),
 	}
 	return nil
 }
@@ -184,7 +180,7 @@ func readFd(r *bufio.Reader) error {
 		return err
 	}
 	ex := binary.LittleEndian.Uint32(buf)
-	expiry := time.Duration(ex) * time.Second
+	expiry := time.Unix(int64(ex), 0)
 	fmt.Println("seconds expiry: ", expiry)
 	err = readData(r, expiry)
 	if err != nil {
@@ -200,7 +196,7 @@ func readFc(r *bufio.Reader) error {
 		return err
 	}
 	ex := binary.LittleEndian.Uint64(buf)
-	expiry := time.Duration(ex) * time.Millisecond
+	expiry := time.UnixMilli(int64(ex))
 	fmt.Println("milliseconds expiry: ", expiry)
 	err = readData(r, expiry)
 	if err != nil {

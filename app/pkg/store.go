@@ -62,7 +62,7 @@ func (s *Store) Load(path string) error {
 		return err
 	}
 	for k, v := range d {
-		s.Set(k, v.v, v.ex)
+		s.store[k] = &v
 	}
 	return nil
 }
