@@ -48,6 +48,7 @@ func main() {
 		"INFO":   pkg.NewInfo(repl),
 		"PSYNC":  pkg.NewPsync(repl),
 		"CONFIG": pkg.NewConf(config),
+		"KEYS":   pkg.NewKeys(config),
 	}
 
 	ack0, ack1 := &atomic.Int64{}, &atomic.Int64{}
