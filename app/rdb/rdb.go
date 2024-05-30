@@ -150,17 +150,20 @@ func readFe(r *bufio.Reader) ([]byte, error) {
 }
 
 func readFb(r *bufio.Reader) error {
-	d, t, err := decode(r)
-	if err != nil {
-		return err
-	}
-	fmt.Println("hash length", string(d), t)
-
-	d, t, err = decode(r)
-	if err != nil {
-		return err
-	}
-	fmt.Println("expiry length: ", string(d), t)
+	//d, t, err := decode(r)
+	//if err != nil {
+	//	return err
+	//}
+	//fmt.Println("hash length", string(d), t)
+	//
+	//d, t, err = decode(r)
+	//if err != nil {
+	//	return err
+	//}
+	//fmt.Println("expiry length: ", string(d), t)
+	//return nil
+	r.ReadByte()
+	r.ReadByte()
 	return nil
 }
 
