@@ -130,7 +130,6 @@ func (s *Session) worker() {
 }
 
 func (s *Session) handle(in Input) error {
-	fmt.Printf("handing %q\n", in.b)
 	cmd, args, err := resp.DecodeCmd(in.v)
 	if err != nil {
 		return err
@@ -161,10 +160,10 @@ func (s *Session) handle(in Input) error {
 	}
 
 	// a master connection
-	if s.shouldHandshake {
-		s.ack.Add(int64(len(in.b)))
-		fmt.Printf("added %d to ack from master. val=%d, source=%q\n", len(in.b), s.ack.Load(), string(in.b))
-	}
+	//if s.shouldHandshake {
+	//	s.ack.Add(int64(len(in.b)))
+	//	fmt.Printf("added %d to ack from master. val=%d, source=%q\n", len(in.b), s.ack.Load(), string(in.b))
+	//}
 
 	// setup slave conn
 	sl, ok := s.repl.slaves[s.id]
@@ -233,7 +232,6 @@ func parseInputs(buf []byte) ([][]byte, []resp.Value) {
 
 func (s *Session) push(buf []byte, val resp.Value) {
 	if s.repl.Role == MasterReplica {
-
 		cmd, _, err := resp.DecodeCmd(val)
 		if err != nil {
 			fmt.Println("decode cmd: ", err.Error())

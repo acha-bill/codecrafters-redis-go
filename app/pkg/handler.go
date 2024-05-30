@@ -199,9 +199,11 @@ func (h ReplicaConfig) Handle(sId int64, args []resp.Value, res chan<- []byte) e
 	}
 
 	if o.ack != "" {
-		s.ack, err = strconv.Atoi(o.ack)
+		v, err := strconv.Atoi(o.ack)
 		if err != nil {
 			fmt.Println("invalid number: ", err.Error())
+		} else {
+			s.ack = v
 		}
 		return nil
 	}
