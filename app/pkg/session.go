@@ -241,7 +241,7 @@ func (s *Session) push(buf []byte, val resp.Value) {
 			return
 		}
 
-		s.ack.Add(int64(len(buf)))
+		//s.ack.Add(int64(len(buf)))
 		fmt.Printf("added %d to ack. val=%d, source=%q\n", len(buf), s.ack.Load(), string(buf))
 
 		for _, sl := range s.repl.slaves {
