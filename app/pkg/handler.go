@@ -348,10 +348,12 @@ func (h Keys) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 	if err != nil {
 		return err
 	}
+
+	var keys []string
 	for k := range r {
-		res <- resp.Encode([]string{k})
-		return nil
+		keys = append(keys, k)
 	}
+	res <- resp.Encode(keys)
 
 	return nil
 }
