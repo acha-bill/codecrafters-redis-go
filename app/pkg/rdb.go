@@ -47,16 +47,14 @@ func readDDB(path string) (map[string]rdbDataVal, error) {
 		return nil, err
 	}
 	defer f.Close()
-	defer func() {
-		f.Seek(0, 0)
-		buf, _ := io.ReadAll(f)
-		fmt.Println(hex.EncodeToString(buf))
-	}()
+
+	buf, _ := io.ReadAll(f)
+	fmt.Println(hex.EncodeToString(buf))
 
 	r := bufio.NewReader(f)
 
 	// REDIS
-	buf := make([]byte, 1024)
+	buf = make([]byte, 5)
 	n, err := r.Read(buf[:5])
 	if n != 5 {
 		return nil, ErrInvalidHeader
@@ -138,7 +136,7 @@ func readData(r *bufio.Reader, expiry time.Duration) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("reading value of typeK ", k)
+	fmt.Println("reading value of type ", k)
 	key, _, err := decode(r)
 	var v Value
 	err = decodeValue(r, &v)
