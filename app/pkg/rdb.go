@@ -50,6 +50,7 @@ func readDDB(path string) (map[string]rdbDataVal, error) {
 
 	buf, _ := io.ReadAll(f)
 	fmt.Println(hex.EncodeToString(buf))
+	f.Seek(0, 0)
 
 	r := bufio.NewReader(f)
 
