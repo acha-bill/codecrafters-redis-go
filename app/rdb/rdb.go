@@ -109,6 +109,10 @@ L:
 			fmt.Println("end reached")
 			break L
 		default:
+			err = r.UnreadByte()
+			if err != nil {
+				return nil, fmt.Errorf("unread")
+			}
 			err = readData(r)
 			if err != nil {
 				return nil, fmt.Errorf("read data: %w", err)
@@ -120,10 +124,11 @@ L:
 }
 
 func readData(r *bufio.Reader) error {
-	_, err := r.ReadByte()
+	k, err := r.ReadByte()
 	if err != nil {
 		return err
 	}
+	fmt.Println("reading value of typeK ", k)
 	key, _, err := decode(r)
 	var v Value
 	err = decodeValue(r, &v)
