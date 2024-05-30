@@ -357,3 +357,24 @@ func (h Keys) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 
 	return nil
 }
+
+type Type struct {
+	store *Store
+}
+
+func NewType(s *Store) Type {
+	return Type{store: s}
+}
+func (h Type) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
+	if len(args) < 2 {
+		return ErrInvalidCmd
+	}
+	key := args[1].Val.(string)
+	_, ok := h.store.Get(key)
+	if ok {
+		res <- resp.EncodeSimple("string")
+	} else {
+		res <- resp.EncodeSimple("none")
+	}
+	return nil
+}
