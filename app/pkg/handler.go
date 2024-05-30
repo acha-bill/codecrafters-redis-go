@@ -199,7 +199,7 @@ func (h ReplicaConfig) Handle(sId int64, args []resp.Value, res chan<- []byte) e
 	}
 
 	if o.ack != "" {
-		fmt.Printf("ack res: %+v\n", args)
+		fmt.Printf("ack res from sId=%d,: %+v\n", sId, args)
 		v, err := strconv.Atoi(o.ack)
 		if err != nil {
 			fmt.Println("invalid number: ", err.Error())
@@ -303,6 +303,9 @@ L:
 		}
 	}
 
+	for _, s := range h.repl.slaves {
+		fmt.Printf("sid = %d, ack = %d, master ack=%d\n", s.sId, s.ack, h.ack.Load())
+	}
 	res <- resp.Encode(c)
 	return nil
 }
