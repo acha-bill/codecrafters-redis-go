@@ -229,29 +229,23 @@ func readFa(r *bufio.Reader) ([]byte, error) {
 //}
 
 func decodeValue(r *bufio.Reader, v *Value) error {
-	b, err := r.ReadByte()
-	if err != nil {
-		return err
-	}
-
 	buf, t, err := decode(r)
 	if err != nil {
 		return err
 	}
-	switch b {
-	case 0x00:
-		v.Kind = t
-		switch t {
-		case RegularString:
-			v.Value = string(buf)
-		case Int8String:
-			v.Value = int8(binary.LittleEndian.Uint16(buf))
-		case Int16String:
-			v.Value = int16(binary.LittleEndian.Uint16(buf))
-		case Int32String:
-			v.Value = int32(binary.LittleEndian.Uint32(buf))
-		}
+
+	v.Kind = t
+	switch t {
+	case RegularString:
+		v.Value = string(buf)
+	case Int8String:
+		v.Value = int8(binary.LittleEndian.Uint16(buf))
+	case Int16String:
+		v.Value = int16(binary.LittleEndian.Uint16(buf))
+	case Int32String:
+		v.Value = int32(binary.LittleEndian.Uint32(buf))
 	}
+
 	return nil
 }
 
