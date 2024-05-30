@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"path"
 	"sync/atomic"
 )
 
@@ -35,6 +36,12 @@ func main() {
 	}
 
 	store := pkg.NewStore()
+	err = store.Load(path.Join(config.DbDir, config.DbFileName))
+	if err != nil {
+		fmt.Println("load rdb", err.Error())
+		os.Exit(1)
+	}
+
 	role := pkg.MasterReplica
 	if replicaOf != "" {
 		role = pkg.SlaveReplica

@@ -55,3 +55,14 @@ func (s *Store) Print() string {
 	defer s.mu.RUnlock()
 	return fmt.Sprintf("%+v", s.store)
 }
+
+func (s *Store) Load(path string) error {
+	d, err := readDDB(path)
+	if err != nil {
+		return err
+	}
+	for k, v := range d {
+		s.Set(k, v, 0)
+	}
+	return nil
+}

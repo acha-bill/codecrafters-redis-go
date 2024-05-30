@@ -1,4 +1,4 @@
-package rdb
+package pkg
 
 import (
 	"bufio"
@@ -29,9 +29,9 @@ const (
 	Int32String
 )
 
-var keys [][]byte
+var data map[string]string
 
-func Read(path string) ([][]byte, error) {
+func readDDB(path string) (map[string]string, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -120,7 +120,7 @@ L:
 		}
 	}
 
-	return keys, nil
+	return data, nil
 }
 
 func readData(r *bufio.Reader) error {
@@ -136,7 +136,7 @@ func readData(r *bufio.Reader) error {
 		return err
 	}
 	fmt.Println("data = ", string(key), v.Value)
-	keys = append(keys, key)
+	data[string(key)] = v.Value.(string)
 	return nil
 }
 
