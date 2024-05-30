@@ -123,7 +123,7 @@ func (s *Session) worker() {
 
 		err := s.handle(in)
 		if err != nil {
-			fmt.Printf("handle input: %q\n, %s", string(in.b), err.Error())
+			fmt.Printf("handle input: %q, %s", string(in.b), err.Error())
 			continue
 		}
 	}

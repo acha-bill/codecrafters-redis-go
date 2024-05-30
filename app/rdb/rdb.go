@@ -3,8 +3,10 @@ package rdb
 import (
 	"bufio"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"time"
@@ -35,6 +37,11 @@ func Read(path string) ([][]byte, error) {
 		return nil, err
 	}
 	defer f.Close()
+	defer func() {
+		f.Seek(0, 0)
+		buf, _ := io.ReadAll(f)
+		fmt.Println(hex.EncodeToString(buf))
+	}()
 
 	r := bufio.NewReader(f)
 
@@ -75,23 +82,37 @@ L:
 		switch b {
 		case 0xfa:
 			_, err = readFa(r)
+			if err != nil {
+				return nil, fmt.Errorf("read fa: %w", err)
+			}
 		case 0xfe:
 			_, err = readFe(r)
+			if err != nil {
+				return nil, fmt.Errorf("read fe: %w", err)
+			}
 		case 0xfd:
 			err = readFd(r)
+			if err != nil {
+				return nil, fmt.Errorf("read fd: %w", err)
+			}
 		case 0xfb:
 			err = readFb(r)
+			if err != nil {
+				return nil, fmt.Errorf("read fb: %w", err)
+			}
 		case 0xfc:
 			err = readFc(r)
+			if err != nil {
+				return nil, fmt.Errorf("read fc: %w", err)
+			}
 		case 0xff:
 			fmt.Println("end reached")
 			break L
 		default:
 			err = readData(r)
-		}
-		if err != nil {
-			fmt.Println(err.Error())
-			return nil, err
+			if err != nil {
+				return nil, fmt.Errorf("read data: %w", err)
+			}
 		}
 	}
 
@@ -128,7 +149,7 @@ func readFb(r *bufio.Reader) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("hash length", d, t)
+	fmt.Println("hash length", string(d), t)
 
 	d, t, err = decode(r)
 	if err != nil {
