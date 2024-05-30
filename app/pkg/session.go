@@ -163,6 +163,8 @@ func (s *Session) handle(in Input) error {
 	// update ack
 	//if cmd == "SET" {
 	s.ack.Add(int64(len(in.b)))
+	fmt.Printf("added %d to ack. val=%d, source=%q\n", len(in.b), s.ack.Load(), string(in.b))
+
 	//}
 
 	// setup slave conn
