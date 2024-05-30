@@ -198,8 +198,8 @@ func (h ReplicaConfig) Handle(sId int64, args []resp.Value, res chan<- []byte) e
 		return nil
 	}
 
-	fmt.Printf("ack res: %+v", args)
 	if o.ack != "" {
+		fmt.Printf("ack res: %+v\n", args)
 		v, err := strconv.Atoi(o.ack)
 		if err != nil {
 			fmt.Println("invalid number: ", err.Error())
@@ -272,7 +272,9 @@ func (h Wait) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 	}
 
 	for _, s := range h.repl.slaves {
-		s.conn.Write(resp.Encode([]string{"REPLCONF", "GETACK", "*"}))
+		b := resp.Encode([]string{"REPLCONF", "GETACK", "*"})
+		s.conn.Write(b)
+		h.ack.Add(int64(len(b)))
 	}
 
 	//time.Sleep(1 * time.Second)
