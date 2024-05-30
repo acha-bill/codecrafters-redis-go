@@ -198,6 +198,7 @@ func (h ReplicaConfig) Handle(sId int64, args []resp.Value, res chan<- []byte) e
 		return nil
 	}
 
+	fmt.Printf("ack res: %+v", args)
 	if o.ack != "" {
 		v, err := strconv.Atoi(o.ack)
 		if err != nil {
