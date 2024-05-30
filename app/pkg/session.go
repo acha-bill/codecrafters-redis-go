@@ -161,9 +161,9 @@ func (s *Session) handle(in Input) error {
 	}
 
 	// update ack
-	if cmd == "SET" {
-		s.ack.Add(int64(len(in.b)))
-	}
+	//if cmd == "SET" {
+	s.ack.Add(int64(len(in.b)))
+	//}
 
 	// setup slave conn
 	sl, ok := s.repl.slaves[s.id]

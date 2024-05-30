@@ -185,8 +185,6 @@ func (h ReplicaConfig) Handle(sId int64, args []resp.Value, res chan<- []byte) e
 		return err
 	}
 
-	fmt.Printf("ack ===> %+v\n", args)
-
 	s, ok := h.repl.slaves[sId]
 	if !ok {
 		s = NewReplica(sId)
@@ -285,8 +283,7 @@ L:
 	for {
 		c = 0
 		for _, s := range h.repl.slaves {
-			fmt.Printf("slave: %+v\n", s)
-			fmt.Printf("master ack: %d\n", h.ack.Load())
+			fmt.Printf("master ack: %d, slave id=%d, ack=%d\n", h.ack.Load(), s.sId, s.ack)
 			if int64(s.ack) == h.ack.Load() {
 				c++
 			}
