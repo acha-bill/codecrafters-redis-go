@@ -181,11 +181,13 @@ func readFb(r *bufio.Reader) error {
 }
 
 func readFd(r *bufio.Reader) error {
-	b, err := r.ReadByte()
+	buf := make([]byte, 4)
+	_, err := r.Read(buf)
 	if err != nil {
 		return err
 	}
-	expiry := time.Duration(b) * time.Second
+	ex := binary.LittleEndian.Uint16(buf)
+	expiry := time.Duration(ex) * time.Second
 	fmt.Println("seconds expiry: ", expiry)
 	err = readData(r, expiry)
 	if err != nil {
@@ -195,11 +197,13 @@ func readFd(r *bufio.Reader) error {
 }
 
 func readFc(r *bufio.Reader) error {
-	b, err := r.ReadByte()
+	buf := make([]byte, 4)
+	_, err := r.Read(buf)
 	if err != nil {
 		return err
 	}
-	expiry := time.Duration(b) * time.Millisecond
+	ex := binary.LittleEndian.Uint32(buf)
+	expiry := time.Duration(ex) * time.Millisecond
 	fmt.Println("milliseconds expiry: ", expiry)
 	err = readData(r, expiry)
 	if err != nil {
