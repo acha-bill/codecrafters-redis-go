@@ -36,17 +36,16 @@ func main() {
 		role = pkg.SlaveReplica
 	}
 	repl := pkg.NewReplication(role, replicaOf, config)
-	ack := &atomic.Int64{}
 	handlers := map[string]pkg.Handler{
-		"PING":     pkg.Ping{},
-		"ECHO":     pkg.Echo{},
-		"SET":      pkg.NewSet(store),
-		"GET":      pkg.NewGet(store),
-		"INFO":     pkg.NewInfo(repl),
-		"REPLCONF": pkg.NewReplicaConfig(repl, ack),
-		"PSYNC":    pkg.NewPsync(repl),
-		"WAIT":     pkg.NewWait(repl),
+		"PING":  pkg.Ping{},
+		"ECHO":  pkg.Echo{},
+		"SET":   pkg.NewSet(store),
+		"GET":   pkg.NewGet(store),
+		"INFO":  pkg.NewInfo(repl),
+		"PSYNC": pkg.NewPsync(repl),
 	}
+
+	ack0, ack1 := &atomic.Int64{}, &atomic.Int64{}
 
 	if role == pkg.SlaveReplica {
 		go func() {
@@ -55,7 +54,9 @@ func main() {
 				fmt.Println("dial master: ", err.Error())
 				os.Exit(1)
 			}
-			session := pkg.NewSession(conn, handlers, repl, config, ack).Responsive(false).Handshake(true)
+
+			handlers["REPLCONF"] = pkg.NewReplicaConfig(repl, ack0)
+			session := pkg.NewSession(conn, handlers, repl, config, ack0).Responsive(false).Handshake(true)
 			go session.Start()
 		}()
 	}
@@ -66,7 +67,9 @@ func main() {
 			log.Fatal("Error accepting connection: ", err.Error())
 		}
 
-		session := pkg.NewSession(conn, handlers, repl, config, ack)
+		handlers["REPLCONF"] = pkg.NewReplicaConfig(repl, ack1)
+		handlers["WAIT"] = pkg.NewWait(repl, ack1)
+		session := pkg.NewSession(conn, handlers, repl, config, ack1)
 		go session.Start()
 	}
 }

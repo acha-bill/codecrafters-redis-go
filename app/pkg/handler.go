@@ -153,6 +153,7 @@ type replicaConfigOpts struct {
 	listeningPort int
 	capa          string
 	getack        string
+	ack           string
 }
 
 func NewReplicaConfig(repl *Replication, ack *atomic.Int64) ReplicaConfig {
@@ -172,6 +173,8 @@ func (h ReplicaConfig) parse(args []resp.Value) (replicaConfigOpts, error) {
 		opts.capa = args[2].Val.(string)
 	case "getack":
 		opts.getack = args[2].Val.(string)
+	case "ack":
+		opts.ack = args[2].Val.(string)
 	}
 
 	return opts, nil
@@ -182,6 +185,8 @@ func (h ReplicaConfig) Handle(sId int64, args []resp.Value, res chan<- []byte) e
 		return err
 	}
 
+	fmt.Printf("ack ===> %+v\n", args)
+
 	s, ok := h.repl.slaves[sId]
 	if !ok {
 		s = NewReplica(sId)
@@ -189,10 +194,17 @@ func (h ReplicaConfig) Handle(sId int64, args []resp.Value, res chan<- []byte) e
 	}
 	s.conf = true
 
-	ack := fmt.Sprintf("%d", h.ack.Load())
-	fmt.Println("ack is ", ack)
 	if o.getack != "" {
+		ack := fmt.Sprintf("%d", h.ack.Load())
 		res <- resp.Encode([]string{"REPLCONF", "ACK", ack})
+		return nil
+	}
+
+	if o.ack != "" {
+		s.ack, err = strconv.Atoi(o.ack)
+		if err != nil {
+			fmt.Println("invalid number: ", err.Error())
+		}
 		return nil
 	}
 
@@ -231,12 +243,66 @@ func (h Psync) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 
 type Wait struct {
 	repl *Replication
+	ack  *atomic.Int64
+}
+type waitOpts struct {
+	replicas int
+	timeout  time.Duration
 }
 
-func NewWait(repl *Replication) Wait {
-	return Wait{repl: repl}
+func (h Wait) parse(args []resp.Value) (waitOpts, error) {
+	var opts waitOpts
+	if len(args) < 3 {
+		return opts, nil
+	}
+	opts.replicas, _ = strconv.Atoi(args[1].Val.(string))
+	tout, _ := strconv.Atoi(args[2].Val.(string))
+	opts.timeout = time.Duration(tout) * time.Millisecond
+
+	return opts, nil
+}
+func NewWait(repl *Replication, ack *atomic.Int64) Wait {
+	return Wait{repl: repl, ack: ack}
 }
 func (h Wait) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
-	res <- resp.Encode(len(h.repl.slaves))
+	opts, err := h.parse(args)
+	if err != nil {
+		return err
+	}
+
+	for _, s := range h.repl.slaves {
+		s.conn.Write(resp.Encode([]string{"REPLCONF", "GETACK", "*"}))
+	}
+
+	//time.Sleep(1 * time.Second)
+
+	checker := time.NewTicker(50 * time.Millisecond)
+	timeout := time.After(opts.timeout)
+	defer checker.Stop()
+
+	var c int
+L:
+	for {
+		c = 0
+		for _, s := range h.repl.slaves {
+			fmt.Printf("slave: %+v\n", s)
+			fmt.Printf("master ack: %d\n", h.ack.Load())
+			if int64(s.ack) == h.ack.Load() {
+				c++
+			}
+		}
+		if c >= opts.replicas {
+			break L
+		}
+
+		select {
+		case <-timeout:
+			break L
+		case <-checker.C:
+			continue
+		}
+	}
+
+	res <- resp.Encode(c)
 	return nil
 }

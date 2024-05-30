@@ -27,6 +27,7 @@ type Replica struct {
 	psync     bool
 	handshake bool
 	conn      net.Conn
+	ack       int
 
 	ch   chan []byte
 	cmds []string

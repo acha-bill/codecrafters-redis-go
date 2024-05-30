@@ -130,6 +130,7 @@ func (s *Session) worker() {
 }
 
 func (s *Session) handle(in Input) error {
+	fmt.Printf("handing %q\n", in.b)
 	cmd, args, err := resp.DecodeCmd(in.v)
 	if err != nil {
 		return err
@@ -160,7 +161,9 @@ func (s *Session) handle(in Input) error {
 	}
 
 	// update ack
-	s.ack.Add(int64(len(in.b)))
+	if cmd == "SET" {
+		s.ack.Add(int64(len(in.b)))
+	}
 
 	// setup slave conn
 	sl, ok := s.repl.slaves[s.id]
