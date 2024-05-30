@@ -231,21 +231,21 @@ func parseInputs(buf []byte) ([][]byte, []resp.Value) {
 }
 
 func (s *Session) push(buf []byte, val resp.Value) {
-	if s.repl.Role == MasterReplica {
-		cmd, _, err := resp.DecodeCmd(val)
-		if err != nil {
-			fmt.Println("decode cmd: ", err.Error())
-			return
-		}
-		if cmd != "SET" {
-			return
-		}
-
-		s.ack.Add(int64(len(buf)))
-		fmt.Printf("added %d to ack. val=%d, source=%q\n", len(buf), s.ack.Load(), string(buf))
-
-		for _, sl := range s.repl.slaves {
-			sl.Push(buf)
-		}
+	//if s.repl.Role == MasterReplica {
+	cmd, _, err := resp.DecodeCmd(val)
+	if err != nil {
+		fmt.Println("decode cmd: ", err.Error())
+		return
 	}
+	if cmd != "SET" {
+		return
+	}
+
+	s.ack.Add(int64(len(buf)))
+	fmt.Printf("added %d to ack. val=%d, source=%q\n", len(buf), s.ack.Load(), string(buf))
+
+	for _, sl := range s.repl.slaves {
+		sl.Push(buf)
+	}
+	//}
 }
