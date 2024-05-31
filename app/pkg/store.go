@@ -135,9 +135,10 @@ func (s *Store) validateStreamID(k string, id string) error {
 		lastMs, lastSeq, err = s.parseStreamId(last.ID)
 	}
 
-	if lastMs == 0 && lastSeq == 0 && ms == 0 && seq == 0 {
+	if ms == 0 && seq == 0 {
 		return ErrZeroXaddID
 	}
+
 	if ms < lastMs {
 		return ErrSmallXaddID
 	}
