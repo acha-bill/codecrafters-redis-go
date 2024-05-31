@@ -112,17 +112,15 @@ func encodeStreamEntry(e store.StreamEntry) []byte {
 		values = append(values, k, v)
 	}
 	valuesEnc := encodeArray(values)
-	res := make([]byte, len(id)+len(valuesEnc))
-	copy(res[:len(id)], id)
-	copy(res[:len(valuesEnc)], valuesEnc)
+	res := encodeArray([]any{id, valuesEnc})
 	return res
 }
 
 func encodeArray(v any) []byte {
 	// don't encode raw bytes
-	//if _, ok := v.([]byte); ok {
-	//	return v.([]byte)
-	//}
+	if _, ok := v.([]byte); ok {
+		return v.([]byte)
+	}
 
 	s := reflect.ValueOf(v)
 	l := s.Len()
