@@ -195,7 +195,6 @@ func (s *Store) readStreams(req [][]string) []*ReadStreamRes {
 		k, startId := streamReq[0], streamReq[1]
 		sv, _ := s.Get(k)
 		if sv == nil {
-			res = append(res, nil)
 			continue
 		}
 		if sv.Type != "stream" {
@@ -215,10 +214,32 @@ func (s *Store) readStreams(req [][]string) []*ReadStreamRes {
 	}
 	return res
 }
+
+func (s *Store) sanitizeReadStream(res []*ReadStreamRes, req [][]string, details map[string]int) []*ReadStreamRes {
+	freshOnly := make(map[string]bool)
+	for _, v := range req {
+		freshOnly[v[0]] = false
+		if v[1] == "$" {
+			freshOnly[v[0]] = true
+		}
+	}
+
+	for _, v := range res {
+		if freshOnly[v.Stream] {
+			v.Entries = v.Entries[details[v.Stream]:]
+
+		}
+	}
+	return res
+}
+
 func (s *Store) ReadStream(req [][]string, block time.Duration) []*ReadStreamRes {
 	res := s.readStreams(req)
 	if block < 0 {
 		return res
+	}
+	if res == nil {
+		return nil
 	}
 
 	read0 := make(map[string]int)
@@ -246,7 +267,7 @@ func (s *Store) ReadStream(req [][]string, block time.Duration) []*ReadStreamRes
 		if !updated() {
 			return nil
 		}
-		return res
+		return s.sanitizeReadStream(res, req, read0)
 	}
 
 	ticker := time.NewTicker(2 * time.Second)
@@ -257,7 +278,7 @@ func (s *Store) ReadStream(req [][]string, block time.Duration) []*ReadStreamRes
 		if !updated() {
 			continue
 		}
-		return res
+		return s.sanitizeReadStream(res, req, read0)
 	}
 }
 
