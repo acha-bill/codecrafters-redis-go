@@ -164,7 +164,12 @@ func (s *Store) RangeStream(k, startId, endId string) []StreamEntry {
 	return res
 }
 
-func (s *Store) ReadStream(req map[string]string, block time.Duration) map[string][]StreamEntry {
+type ReadStreamRes struct {
+	Stream  string
+	Entries []StreamEntry
+}
+
+func (s *Store) ReadStream(req [][]string, block time.Duration) []*ReadStreamRes {
 	skipSequenceCheck := func(id string) bool {
 		return strings.Index(id, "-") < 0
 	}
@@ -180,24 +185,14 @@ func (s *Store) ReadStream(req map[string]string, block time.Duration) map[strin
 		}
 		return skipSequenceCheck(start) || idSeq > startSeq
 	}
-	//
-	//if block > 0 {
-	//	s.xreadBlocked.Store(true)
-	//	time.AfterFunc(block, func() {
-	//		s.xreadBlocked.Store(false)
-	//	})
-	//}
-	//
-	//if s.xreadBlocked.Load() {
-	//	return nil
-	//}
 
-	readStreams := func() map[string][]StreamEntry {
-		res := make(map[string][]StreamEntry)
-		for k, startId := range req {
+	readStreams := func() []*ReadStreamRes {
+		var res []*ReadStreamRes
+		for _, streamReq := range req {
+			k, startId := streamReq[0], streamReq[1]
 			sv, _ := s.Get(k)
 			if sv == nil {
-				res[k] = nil
+				res = append(res, nil)
 				continue
 			}
 			if sv.Type != "stream" {
@@ -210,8 +205,12 @@ func (s *Store) ReadStream(req map[string]string, block time.Duration) map[strin
 					data = append(data, entry)
 				}
 			}
-			res[k] = data
+			res = append(res, &ReadStreamRes{
+				Stream:  k,
+				Entries: data,
+			})
 		}
+
 		return res
 	}
 

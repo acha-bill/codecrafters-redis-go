@@ -448,19 +448,23 @@ func (h Xread) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 		args = args[2:]
 	}
 
-	streams := args[:len(args)/2]
-	indices := args[len(args)/2:]
-
-	d := make(map[string]string)
-	for i := 0; i < len(streams); i++ {
-		d[streams[i].Val.(string)] = indices[i].Val.(string)
+	var d [][]string
+	for i := 0; i < len(args); i += 2 {
+		k, startId := args[i].Val.(string), args[i+1].Val.(string)
+		d = append(d, []string{k, startId})
 	}
 	r := h.s.ReadStream(d, block)
-
 	if block > 0 && r == nil {
 		res <- resp.Nil
 		return nil
 	}
-	res <- resp.Encode(r)
+
+	var toEncode [][]any
+	for _, v := range r {
+		if v != nil {
+			toEncode = append(toEncode, []any{v.Stream, v.Entries})
+		}
+	}
+	res <- resp.Encode(toEncode)
 	return nil
 }
