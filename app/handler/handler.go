@@ -445,15 +445,11 @@ func (h Xread) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 		block = time.Duration(b) * time.Millisecond
 		args = args[4:]
 	} else {
+		block = -1
 		args = args[2:]
 	}
 
 	var d [][]string
-	//for i := 0; i < len(args); i += 2 {
-	//	k, startId := args[i].Val.(string), args[i+1].Val.(string)
-	//	d = append(d, []string{k, startId})
-	//}
-
 	streams := args[:len(args)/2]
 	indices := args[len(args)/2:]
 	for i := 0; i < len(streams); i++ {

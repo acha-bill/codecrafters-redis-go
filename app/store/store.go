@@ -213,26 +213,39 @@ func (s *Store) readStreams(req [][]string) []*ReadStreamRes {
 }
 func (s *Store) ReadStream(req [][]string, block time.Duration) []*ReadStreamRes {
 	res := s.readStreams(req)
-	if block == 0 {
+	if block < 0 {
 		return res
 	}
 
 	lastStreamIds1 := utils.MapCopy(s.lastStreamId)
-	time.Sleep(block)
-	res = s.readStreams(req)
-	lastStreamIds2 := utils.MapCopy(s.lastStreamId)
-
-	updated := true
-	for k := range lastStreamIds1 {
-		if lastStreamIds1[k] == lastStreamIds2[k] {
-			updated = false
-			break
+	updated := func() bool {
+		u := true
+		lastStreamIds2 := utils.MapCopy(s.lastStreamId)
+		for k := range lastStreamIds1 {
+			if lastStreamIds1[k] == lastStreamIds2[k] {
+				u = false
+				break
+			}
 		}
+		return u
 	}
-	if updated {
-		return res
+
+	if block > 0 {
+		time.Sleep(block)
+		if !updated() {
+			return nil
+		}
+		return s.readStreams(req)
 	}
-	return nil
+
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		if updated() {
+			return s.readStreams(req)
+		}
+		<-ticker.C
+	}
 }
 
 func (s *Store) parseStreamId(id string) (int64, int, error) {
