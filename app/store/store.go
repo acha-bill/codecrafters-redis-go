@@ -169,7 +169,7 @@ type ReadStreamRes struct {
 	Entries []StreamEntry
 }
 
-func (s *Store) ReadStream(req [][]string, block time.Duration) []*ReadStreamRes {
+func (s *Store) readStreams(req [][]string) []*ReadStreamRes {
 	skipSequenceCheck := func(id string) bool {
 		return strings.Index(id, "-") < 0
 	}
@@ -186,43 +186,40 @@ func (s *Store) ReadStream(req [][]string, block time.Duration) []*ReadStreamRes
 		return skipSequenceCheck(start) || idSeq > startSeq
 	}
 
-	readStreams := func() []*ReadStreamRes {
-		var res []*ReadStreamRes
-		for _, streamReq := range req {
-			k, startId := streamReq[0], streamReq[1]
-			sv, _ := s.Get(k)
-			if sv == nil {
-				res = append(res, nil)
-				continue
-			}
-			if sv.Type != "stream" {
-				return nil
-			}
-			stream := sv.Val.(*Stream)
-			var data []StreamEntry
-			for _, entry := range stream.Entries {
-				if inRange(entry.ID, startId) {
-					data = append(data, entry)
-				}
-			}
-			res = append(res, &ReadStreamRes{
-				Stream:  k,
-				Entries: data,
-			})
+	var res []*ReadStreamRes
+	for _, streamReq := range req {
+		k, startId := streamReq[0], streamReq[1]
+		sv, _ := s.Get(k)
+		if sv == nil {
+			res = append(res, nil)
+			continue
 		}
-
-		return res
+		if sv.Type != "stream" {
+			return nil
+		}
+		stream := sv.Val.(*Stream)
+		var data []StreamEntry
+		for _, entry := range stream.Entries {
+			if inRange(entry.ID, startId) {
+				data = append(data, entry)
+			}
+		}
+		res = append(res, &ReadStreamRes{
+			Stream:  k,
+			Entries: data,
+		})
 	}
-
-	res := readStreams()
-
+	return res
+}
+func (s *Store) ReadStream(req [][]string, block time.Duration) []*ReadStreamRes {
+	res := s.readStreams(req)
 	if block == 0 {
 		return res
 	}
 
 	lastStreamIds1 := utils.MapCopy(s.lastStreamId)
 	time.Sleep(block)
-	res = readStreams()
+	res = s.readStreams(req)
 	lastStreamIds2 := utils.MapCopy(s.lastStreamId)
 
 	updated := true
@@ -235,7 +232,6 @@ func (s *Store) ReadStream(req [][]string, block time.Duration) []*ReadStreamRes
 	if updated {
 		return res
 	}
-
 	return nil
 }
 

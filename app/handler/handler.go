@@ -449,10 +449,17 @@ func (h Xread) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 	}
 
 	var d [][]string
-	for i := 0; i < len(args); i += 2 {
-		k, startId := args[i].Val.(string), args[i+1].Val.(string)
-		d = append(d, []string{k, startId})
+	//for i := 0; i < len(args); i += 2 {
+	//	k, startId := args[i].Val.(string), args[i+1].Val.(string)
+	//	d = append(d, []string{k, startId})
+	//}
+
+	streams := args[:len(args)/2]
+	indices := args[len(args)/2:]
+	for i := 0; i < len(streams); i++ {
+		d = append(d, []string{streams[i].Val.(string), indices[i].Val.(string)})
 	}
+
 	r := h.s.ReadStream(d, block)
 	if block > 0 && r == nil {
 		res <- resp.Nil
