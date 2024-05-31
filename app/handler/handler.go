@@ -436,7 +436,18 @@ func (h Xread) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 		return ErrInvalidCmd
 	}
 
-	args = args[2:]
+	var block time.Duration
+	if strings.ToUpper(args[1].Val.(string)) == "BLOCK" {
+		b, err := strconv.Atoi(args[2].Val.(string))
+		if err != nil {
+			return err
+		}
+		block = time.Duration(b) * time.Millisecond
+		args = args[4:]
+	} else {
+		args = args[2:]
+	}
+
 	streams := args[:len(args)/2]
 	indices := args[len(args)/2:]
 
@@ -444,7 +455,7 @@ func (h Xread) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 	for i := 0; i < len(streams); i++ {
 		d[streams[i].Val.(string)] = indices[i].Val.(string)
 	}
-	r := h.s.ReadStream(d)
+	r := h.s.ReadStream(d, block)
 	res <- resp.Encode(r)
 	return nil
 }

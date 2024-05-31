@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -37,6 +38,8 @@ type Val struct {
 type Store struct {
 	store map[string]*Val
 	mu    sync.RWMutex
+
+	xreadBlocked atomic.Bool
 }
 
 func New() *Store {
@@ -157,7 +160,7 @@ func (s *Store) RangeStream(k, startId, endId string) []StreamEntry {
 	return res
 }
 
-func (s *Store) ReadStream(req map[string]string) map[string][]StreamEntry {
+func (s *Store) ReadStream(req map[string]string, block time.Duration) map[string][]StreamEntry {
 	skipSequenceCheck := func(id string) bool {
 		return strings.Index(id, "-") < 0
 	}
@@ -174,11 +177,19 @@ func (s *Store) ReadStream(req map[string]string) map[string][]StreamEntry {
 		return skipSequenceCheck(start) || idSeq > startSeq
 	}
 
+	if block > 0 {
+		s.xreadBlocked.Store(true)
+		time.AfterFunc(block, func() {
+			s.xreadBlocked.Store(false)
+		})
+	}
+
 	res := make(map[string][]StreamEntry)
 	for k, startId := range req {
 		sv, _ := s.Get(k)
 		if sv == nil {
-			return nil
+			res[k] = nil
+			continue
 		}
 		if sv.Type != "stream" {
 			return nil
