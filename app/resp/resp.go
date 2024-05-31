@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/codecrafters-io/redis-starter-go/app/utils"
 	"reflect"
 	"strconv"
 	"strings"
@@ -62,6 +63,10 @@ func EncodeRDB() []byte {
 	b = append(b, f...)
 	//b = append(b, crlf...)
 	return b
+}
+
+func EncodeError(err error) []byte {
+	return []byte(fmt.Sprintf("-ERR %s%s", utils.Catpialize(err.Error()), crlf))
 }
 
 func Encode(v any) []byte {
