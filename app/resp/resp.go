@@ -90,6 +90,8 @@ func Encode(v any) []byte {
 		res = encodeBulkString(v)
 	case reflect.Slice, reflect.Array:
 		res = encodeArray(v)
+	case reflect.Map:
+		res = encodeMap(v)
 	default:
 	}
 	return res
@@ -114,6 +116,18 @@ func encodeStreamEntry(e store.StreamEntry) []byte {
 	valuesEnc := encodeArray(values)
 	res := encodeArray([]any{id, valuesEnc})
 	return res
+}
+
+func encodeMap(v any) []byte {
+	s := reflect.ValueOf(v)
+	l := s.Len()
+
+	arr := make([][]any, l)
+	for i, k := range s.MapKeys() {
+		v := s.MapIndex(k)
+		arr[i] = []any{k, v}
+	}
+	return encodeArray(arr)
 }
 
 func encodeArray(v any) []byte {

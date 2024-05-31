@@ -423,3 +423,20 @@ func (h Xrange) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 	res <- resp.Encode(r)
 	return nil
 }
+
+type Xread struct {
+	s *store.Store
+}
+
+func NewXread(s *store.Store) Xread {
+	return Xread{s: s}
+}
+func (h Xread) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
+	if len(args) < 4 {
+		return ErrInvalidCmd
+	}
+	k, startId := args[1].Val.(string), args[2].Val.(string)
+	r := h.s.ReadStream(k, startId)
+	res <- resp.Encode(r)
+	return nil
+}
