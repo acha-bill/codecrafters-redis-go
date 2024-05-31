@@ -115,6 +115,7 @@ func (s *Store) SetStream(k string, id string, data map[string]string, px time.D
 			ex:        time.Now().Add(px),
 			canExpire: px > 0,
 		}
+		s.lastStreamId[k] = id
 		return id, nil
 	}
 
@@ -217,7 +218,9 @@ func (s *Store) ReadStream(req [][]string, block time.Duration) []*ReadStreamRes
 		return res
 	}
 
+	fmt.Println(s.lastStreamId)
 	lastStreamIds1 := utils.MapCopy(s.lastStreamId)
+	fmt.Println(lastStreamIds1)
 	updated := func() bool {
 		u := true
 		lastStreamIds2 := utils.MapCopy(s.lastStreamId)
@@ -227,6 +230,8 @@ func (s *Store) ReadStream(req [][]string, block time.Duration) []*ReadStreamRes
 				break
 			}
 		}
+		fmt.Println(lastStreamIds2)
+		fmt.Println("updated", u)
 		return u
 	}
 
