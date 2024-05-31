@@ -140,7 +140,10 @@ func (s *Store) parseStreamId(id string) (int64, int, error) {
 func (s *Store) generateSeq(k string, ms int64) int {
 	sv, _ := s.Get(k)
 	if sv == nil {
-		return 1
+		if ms == 0 {
+			return 1
+		}
+		return 0
 	}
 	var lastSeq int
 	empty := true
