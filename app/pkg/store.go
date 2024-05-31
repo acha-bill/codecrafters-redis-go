@@ -67,10 +67,25 @@ func (s *Store) SetString(k string, v string, px time.Duration) {
 	}
 }
 
-func (s *Store) SetStream(k string, id string, px time.Duration) error {
-	err := s.validateStreamID(k, id)
-	if err != nil {
-		return err
+func (s *Store) SetStream(k string, id string, px time.Duration) (string, error) {
+	idParts := strings.Split(id, "-")
+	if len(idParts) == 2 {
+		if idParts[0] != "*" && idParts[1] == "*" {
+			ms, _ := strconv.Atoi(idParts[0])
+			seq := s.generateSeq(k, ms)
+			id = fmt.Sprintf("%d-%d", ms, seq)
+		} else if idParts[0] == "*" && idParts[1] == "*" {
+
+		} else {
+			err := s.validateStreamID(k, id)
+			if err != nil {
+				return "", err
+			}
+		}
+	}
+
+	if id == "*" {
+
 	}
 
 	s.mu.Lock()
@@ -93,7 +108,7 @@ func (s *Store) SetStream(k string, id string, px time.Duration) error {
 			ex:        time.Now().Add(px),
 			canExpire: px > 0,
 		}
-		return nil
+		return id, nil
 	}
 
 	stream := storeVal.val.Val.(*Stream)
@@ -101,7 +116,7 @@ func (s *Store) SetStream(k string, id string, px time.Duration) error {
 		ID:     id,
 		Values: make(map[string]string),
 	})
-	return nil
+	return id, nil
 }
 
 func (s *Store) parseStreamId(id string) (int, int, error) {
@@ -119,6 +134,28 @@ func (s *Store) parseStreamId(id string) (int, int, error) {
 		return 0, 0, err
 	}
 	return ms, seq, nil
+}
+
+func (s *Store) generateSeq(k string, ms int) int {
+	sv, _ := s.Get(k)
+	if sv == nil {
+		return 0
+	}
+	var lastSeq int
+	for _, e := range sv.Val.(*Stream).Entries {
+		entryMs, _, _ := s.parseStreamId(e.ID)
+		if entryMs == ms {
+			_, lastSeq, _ = s.parseStreamId(e.ID)
+		}
+	}
+
+	if ms == 0 {
+		return lastSeq + 1
+	}
+	if lastSeq == 0 {
+		return 1
+	}
+	return lastSeq + 1
 }
 
 func (s *Store) validateStreamID(k string, id string) error {
