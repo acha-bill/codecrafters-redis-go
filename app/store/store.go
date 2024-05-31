@@ -157,12 +157,7 @@ func (s *Store) RangeStream(k, startId, endId string) []StreamEntry {
 	return res
 }
 
-func (s *Store) ReadStream(k, startId string) map[string][]StreamEntry {
-	sv, _ := s.Get(k)
-	if sv == nil {
-		return nil
-	}
-
+func (s *Store) ReadStream(req map[string]string) map[string][]StreamEntry {
 	skipSequenceCheck := func(id string) bool {
 		return strings.Index(id, "-") < 0
 	}
@@ -178,19 +173,25 @@ func (s *Store) ReadStream(k, startId string) map[string][]StreamEntry {
 		}
 		return skipSequenceCheck(start) || idSeq > startSeq
 	}
-	if sv.Type != "stream" {
-		return nil
-	}
-	stream := sv.Val.(*Stream)
-	res := make(map[string][]StreamEntry)
 
-	var data []StreamEntry
-	for _, entry := range stream.Entries {
-		if inRange(entry.ID, startId) {
-			data = append(data, entry)
+	res := make(map[string][]StreamEntry)
+	for k, startId := range req {
+		sv, _ := s.Get(k)
+		if sv == nil {
+			return nil
 		}
+		if sv.Type != "stream" {
+			return nil
+		}
+		stream := sv.Val.(*Stream)
+		var data []StreamEntry
+		for _, entry := range stream.Entries {
+			if inRange(entry.ID, startId) {
+				data = append(data, entry)
+			}
+		}
+		res[k] = data
 	}
-	res[k] = data
 	return res
 }
 
