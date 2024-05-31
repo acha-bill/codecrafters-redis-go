@@ -139,7 +139,7 @@ func (s *Store) parseStreamId(id string) (int, int, error) {
 func (s *Store) generateSeq(k string, ms int) int {
 	sv, _ := s.Get(k)
 	if sv == nil {
-		return 0
+		return 1
 	}
 	var lastSeq int
 	for _, e := range sv.Val.(*Stream).Entries {
