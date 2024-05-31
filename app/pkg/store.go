@@ -130,7 +130,7 @@ func (s *Store) validateStreamID(k string, id string) error {
 	var lastMs, lastSeq int
 	sv, _ := s.Get(k)
 	if sv != nil {
-		entries := sv.Val.(Stream).Entries
+		entries := sv.Val.(*Stream).Entries
 		last := entries[len(entries)-1]
 		lastMs, lastSeq, err = s.parseStreamId(last.ID)
 	}
