@@ -20,14 +20,15 @@ var (
 )
 
 type Replica struct {
-	sId       int64
-	capa      map[string]string
-	port      int
-	conf      bool
-	psync     bool
-	handshake bool
-	conn      net.Conn
-	ack       int
+	sId  int64
+	capa map[string]string
+	port int
+
+	Conf      bool
+	Psync     bool
+	Handshake bool
+	Conn      net.Conn
+	Ack       int
 
 	ch   chan []byte
 	cmds []string
@@ -49,11 +50,11 @@ func (r *Replica) Push(b []byte) {
 }
 
 func (r *Replica) Start() {
-	for r.conn == nil {
+	for r.Conn == nil {
 	}
 
 	for v := range r.ch {
-		_, err := r.conn.Write(v)
+		_, err := r.Conn.Write(v)
 		if err != nil {
 			fmt.Println("write to slave: ", err.Error())
 		}
@@ -94,4 +95,20 @@ func (r *Replication) Dial() (net.Conn, error) {
 		return nil, err
 	}
 	return conn, nil
+}
+
+func (r *Replication) GetSlave(id int64) (*Replica, bool) {
+	s, ok := r.slaves[id]
+	return s, ok
+}
+func (r *Replication) SetSlave(id int64, replica *Replica) {
+	r.slaves[id] = replica
+}
+
+func (r *Replication) GetSlaves() []*Replica {
+	var res []*Replica
+	for _, v := range r.slaves {
+		res = append(res, v)
+	}
+	return res
 }

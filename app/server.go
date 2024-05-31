@@ -3,7 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/codecrafters-io/redis-starter-go/app/handler"
 	"github.com/codecrafters-io/redis-starter-go/app/pkg"
+	"github.com/codecrafters-io/redis-starter-go/app/session"
+	"github.com/codecrafters-io/redis-starter-go/app/store"
 	"log"
 	"net"
 	"os"
@@ -35,7 +38,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	store := pkg.NewStore()
+	store := store.New()
 	err = store.Load(path.Join(config.DbDir, config.DbFileName))
 	if err != nil {
 		fmt.Println("load rdb", err.Error())
@@ -47,17 +50,18 @@ func main() {
 		role = pkg.SlaveReplica
 	}
 	repl := pkg.NewReplication(role, replicaOf, config)
-	handlers := map[string]pkg.Handler{
-		"PING":   pkg.Ping{},
-		"ECHO":   pkg.Echo{},
-		"SET":    pkg.NewSet(store),
-		"GET":    pkg.NewGet(store),
-		"INFO":   pkg.NewInfo(repl),
-		"PSYNC":  pkg.NewPsync(repl),
-		"CONFIG": pkg.NewConf(config),
-		"KEYS":   pkg.NewKeys(config),
-		"TYPE":   pkg.NewType(store),
-		"XADD":   pkg.NewXadd(store),
+	handlers := map[string]handler.Handler{
+		"PING":   handler.Ping{},
+		"ECHO":   handler.Echo{},
+		"SET":    handler.NewSet(store),
+		"GET":    handler.NewGet(store),
+		"INFO":   handler.NewInfo(repl),
+		"PSYNC":  handler.NewPsync(repl),
+		"CONFIG": handler.NewConf(config),
+		"KEYS":   handler.NewKeys(config),
+		"TYPE":   handler.NewType(store),
+		"XADD":   handler.NewXadd(store),
+		"XRANGE": handler.NewXrange(store),
 	}
 
 	ack0, ack1 := &atomic.Int64{}, &atomic.Int64{}
@@ -70,9 +74,9 @@ func main() {
 				os.Exit(1)
 			}
 
-			handlers["REPLCONF"] = pkg.NewReplicaConfig(repl, ack0)
-			session := pkg.NewSession(conn, handlers, repl, config, ack0).Responsive(false).Handshake(true)
-			go session.Start()
+			handlers["REPLCONF"] = handler.NewReplicaConfig(repl, ack0)
+			s := session.New(conn, handlers, repl, config, ack0).Responsive(false).Handshake(true)
+			go s.Start()
 		}()
 	}
 
@@ -82,9 +86,9 @@ func main() {
 			log.Fatal("Error accepting connection: ", err.Error())
 		}
 
-		handlers["REPLCONF"] = pkg.NewReplicaConfig(repl, ack1)
-		handlers["WAIT"] = pkg.NewWait(repl, ack1)
-		session := pkg.NewSession(conn, handlers, repl, config, ack1)
-		go session.Start()
+		handlers["REPLCONF"] = handler.NewReplicaConfig(repl, ack1)
+		handlers["WAIT"] = handler.NewWait(repl, ack1)
+		s := session.New(conn, handlers, repl, config, ack1)
+		go s.Start()
 	}
 }

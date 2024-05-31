@@ -5,10 +5,12 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/codecrafters-io/redis-starter-go/app/utils"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/codecrafters-io/redis-starter-go/app/store"
+	"github.com/codecrafters-io/redis-starter-go/app/utils"
 )
 
 type TYPE rune
@@ -70,8 +72,17 @@ func EncodeError(err error) []byte {
 }
 
 func Encode(v any) []byte {
-	t := reflect.TypeOf(v)
 	var res []byte
+
+	switch v.(type) {
+	case store.StreamEntry:
+		res = encodeStreamEntry(v.(store.StreamEntry))
+	}
+	if res != nil {
+		return res
+	}
+
+	t := reflect.TypeOf(v)
 	switch t.Kind() {
 	case reflect.Int:
 		res = encodeInt(v)
@@ -94,7 +105,25 @@ func encodeBulkString(v any) []byte {
 	return []byte(r)
 }
 
+func encodeStreamEntry(e store.StreamEntry) []byte {
+	id := encodeBulkString(e.ID)
+	var values []string
+	for k, v := range e.Values {
+		values = append(values, k, v)
+	}
+	valuesEnc := encodeArray(values)
+	res := make([]byte, len(id)+len(valuesEnc))
+	copy(res[:len(id)], id)
+	copy(res[:len(valuesEnc)], valuesEnc)
+	return res
+}
+
 func encodeArray(v any) []byte {
+	// don't encode raw bytes
+	//if _, ok := v.([]byte); ok {
+	//	return v.([]byte)
+	//}
+
 	s := reflect.ValueOf(v)
 	l := s.Len()
 	ret := make([][]byte, l)

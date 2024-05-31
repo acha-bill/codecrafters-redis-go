@@ -1,14 +1,17 @@
-package pkg
+package handler
 
 import (
 	"errors"
 	"fmt"
-	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"path"
 	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"github.com/codecrafters-io/redis-starter-go/app/pkg"
+	"github.com/codecrafters-io/redis-starter-go/app/resp"
+	"github.com/codecrafters-io/redis-starter-go/app/store"
 )
 
 var (
@@ -38,13 +41,13 @@ func (h Echo) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 }
 
 type Set struct {
-	store *Store
+	store *store.Store
 }
 type setOpts struct {
 	px time.Duration
 }
 
-func NewSet(s *Store) *Set {
+func NewSet(s *store.Store) *Set {
 	return &Set{store: s}
 }
 func (h *Set) parse(args []resp.Value) (*setOpts, error) {
@@ -81,10 +84,10 @@ func (h *Set) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 }
 
 type Get struct {
-	store *Store
+	store *store.Store
 }
 
-func NewGet(s *Store) *Get {
+func NewGet(s *store.Store) *Get {
 	return &Get{store: s}
 }
 func (h *Get) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
@@ -103,13 +106,13 @@ func (h *Get) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 }
 
 type Info struct {
-	repl *Replication
+	repl *pkg.Replication
 }
 type infoOpts struct {
 	replication bool
 }
 
-func NewInfo(repl *Replication) Info {
+func NewInfo(repl *pkg.Replication) Info {
 	return Info{repl: repl}
 }
 
@@ -147,7 +150,7 @@ func (h Info) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 }
 
 type ReplicaConfig struct {
-	repl *Replication
+	repl *pkg.Replication
 	ack  *atomic.Int64
 }
 type replicaConfigOpts struct {
@@ -157,7 +160,7 @@ type replicaConfigOpts struct {
 	ack           string
 }
 
-func NewReplicaConfig(repl *Replication, ack *atomic.Int64) ReplicaConfig {
+func NewReplicaConfig(repl *pkg.Replication, ack *atomic.Int64) ReplicaConfig {
 	return ReplicaConfig{repl: repl, ack: ack}
 }
 
@@ -186,12 +189,12 @@ func (h ReplicaConfig) Handle(sId int64, args []resp.Value, res chan<- []byte) e
 		return err
 	}
 
-	s, ok := h.repl.slaves[sId]
+	s, ok := h.repl.GetSlave(sId)
 	if !ok {
-		s = NewReplica(sId)
-		h.repl.slaves[sId] = s
+		s = pkg.NewReplica(sId)
+		h.repl.SetSlave(sId, s)
 	}
-	s.conf = true
+	s.Conf = true
 
 	if o.getack != "" {
 		ack := fmt.Sprintf("%d", h.ack.Load())
@@ -205,7 +208,7 @@ func (h ReplicaConfig) Handle(sId int64, args []resp.Value, res chan<- []byte) e
 		if err != nil {
 			fmt.Println("invalid number: ", err.Error())
 		} else {
-			s.ack = v
+			s.Ack = v
 		}
 		return nil
 	}
@@ -215,10 +218,10 @@ func (h ReplicaConfig) Handle(sId int64, args []resp.Value, res chan<- []byte) e
 }
 
 type Psync struct {
-	repl *Replication
+	repl *pkg.Replication
 }
 
-func NewPsync(repl *Replication) Psync {
+func NewPsync(repl *pkg.Replication) Psync {
 	return Psync{repl: repl}
 }
 
@@ -227,14 +230,14 @@ func (h Psync) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 		return ErrInvalidCmd
 	}
 
-	s, ok := h.repl.slaves[sId]
+	s, ok := h.repl.GetSlave(sId)
 	if !ok {
-		s = NewReplica(sId)
-		h.repl.slaves[sId] = s
+		s = pkg.NewReplica(sId)
+		h.repl.SetSlave(sId, s)
 	}
 
-	s.psync = true
-	s.handshake = s.conf && s.psync
+	s.Psync = true
+	s.Handshake = s.Conf && s.Psync
 
 	res <- resp.EncodeSimple(fmt.Sprintf("FULLRESYNC %s 0", h.repl.ID))
 	time.Sleep(1 * time.Second)
@@ -244,7 +247,7 @@ func (h Psync) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 }
 
 type Wait struct {
-	repl *Replication
+	repl *pkg.Replication
 	ack  *atomic.Int64
 }
 type waitOpts struct {
@@ -263,7 +266,7 @@ func (h Wait) parse(args []resp.Value) (waitOpts, error) {
 
 	return opts, nil
 }
-func NewWait(repl *Replication, ack *atomic.Int64) Wait {
+func NewWait(repl *pkg.Replication, ack *atomic.Int64) Wait {
 	return Wait{repl: repl, ack: ack}
 }
 func (h Wait) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
@@ -272,9 +275,9 @@ func (h Wait) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 		return err
 	}
 
-	for _, s := range h.repl.slaves {
+	for _, s := range h.repl.GetSlaves() {
 		b := resp.Encode([]string{"REPLCONF", "GETACK", "*"})
-		s.conn.Write(b)
+		s.Conn.Write(b)
 	}
 
 	//time.Sleep(1 * time.Second)
@@ -287,8 +290,8 @@ func (h Wait) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 L:
 	for {
 		c = 0
-		for _, s := range h.repl.slaves {
-			if int64(s.ack) >= h.ack.Load() {
+		for _, s := range h.repl.GetSlaves() {
+			if int64(s.Ack) >= h.ack.Load() {
 				c++
 			}
 		}
@@ -304,18 +307,15 @@ L:
 		}
 	}
 
-	for _, s := range h.repl.slaves {
-		fmt.Printf("sid = %d, ack = %d, master ack=%d\n", s.sId, s.ack, h.ack.Load())
-	}
 	res <- resp.Encode(c)
 	return nil
 }
 
 type Conf struct {
-	c Config
+	c pkg.Config
 }
 
-func NewConf(c Config) Conf {
+func NewConf(c pkg.Config) Conf {
 	return Conf{c: c}
 }
 func (h Conf) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
@@ -337,14 +337,14 @@ func (h Conf) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 }
 
 type Keys struct {
-	conf Config
+	conf pkg.Config
 }
 
-func NewKeys(c Config) Keys {
+func NewKeys(c pkg.Config) Keys {
 	return Keys{conf: c}
 }
 func (h Keys) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
-	r, err := readDDB(path.Join(h.conf.DbDir, h.conf.DbFileName))
+	r, err := pkg.ReadRDB(path.Join(h.conf.DbDir, h.conf.DbFileName))
 	if err != nil {
 		return err
 	}
@@ -359,10 +359,10 @@ func (h Keys) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 }
 
 type Type struct {
-	store *Store
+	store *store.Store
 }
 
-func NewType(s *Store) Type {
+func NewType(s *store.Store) Type {
 	return Type{store: s}
 }
 func (h Type) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
@@ -380,21 +380,46 @@ func (h Type) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 }
 
 type Xadd struct {
-	s *Store
+	s *store.Store
 }
 
-func NewXadd(s *Store) Xadd {
+func NewXadd(s *store.Store) Xadd {
 	return Xadd{s: s}
 }
 func (h Xadd) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
-	if len(args) < 4 {
+	if len(args) < 3 {
 		return ErrInvalidCmd
 	}
 	k, id := args[1].Val.(string), args[2].Val.(string)
-	id, err := h.s.SetStream(k, id, 0)
+
+	data := make(map[string]string)
+	for i := 3; i < len(args); i += 2 {
+		if i+1 >= len(args) {
+			return ErrInvalidCmd
+		}
+		data[args[i].Val.(string)] = args[i+1].Val.(string)
+	}
+	id, err := h.s.SetStream(k, id, data, 0)
 	if err != nil {
 		return err
 	}
 	res <- resp.Encode(id)
+	return nil
+}
+
+type Xrange struct {
+	s *store.Store
+}
+
+func NewXrange(s *store.Store) Xrange {
+	return Xrange{s: s}
+}
+func (h Xrange) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
+	if len(args) < 4 {
+		return ErrInvalidCmd
+	}
+	k, startId, endId := args[1].Val.(string), args[2].Val.(string), args[3].Val.(string)
+	r := h.s.RangeStream(k, startId, endId)
+	res <- resp.Encode(r)
 	return nil
 }

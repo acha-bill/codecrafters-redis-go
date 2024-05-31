@@ -1,8 +1,10 @@
-package pkg
+package session
 
 import (
 	"errors"
 	"fmt"
+	"github.com/codecrafters-io/redis-starter-go/app/handler"
+	"github.com/codecrafters-io/redis-starter-go/app/pkg"
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"io"
 	"net"
@@ -20,13 +22,13 @@ type Input struct {
 // Session is the life cycle of a connection
 type Session struct {
 	conn       net.Conn
-	handlers   map[string]Handler
+	handlers   map[string]handler.Handler
 	inC        chan Input
 	outC       chan []byte
-	repl       *Replication
+	repl       *pkg.Replication
 	id         int64
 	responsive bool
-	config     Config
+	config     pkg.Config
 
 	// handshake
 	shouldHandshake  bool
@@ -39,7 +41,7 @@ type Session struct {
 	ack *atomic.Int64
 }
 
-func NewSession(conn net.Conn, handlers map[string]Handler, repl *Replication, config Config, ack *atomic.Int64) *Session {
+func New(conn net.Conn, handlers map[string]handler.Handler, repl *pkg.Replication, config pkg.Config, ack *atomic.Int64) *Session {
 	return &Session{
 		conn:             conn,
 		handlers:         handlers,
@@ -69,7 +71,7 @@ func (s *Session) Start() {
 	go s.readLoop()
 	go s.writeLoop()
 
-	if s.repl.Role == SlaveReplica && s.shouldHandshake {
+	if s.repl.Role == pkg.SlaveReplica && s.shouldHandshake {
 		go s.handshake()
 	}
 }
@@ -166,9 +168,9 @@ func (s *Session) handle(in Input) error {
 	}
 
 	// setup slave conn
-	sl, ok := s.repl.slaves[s.id]
-	if ok && sl.handshake && sl.conn == nil {
-		sl.conn = s.conn
+	sl, ok := s.repl.GetSlave(s.id)
+	if ok && sl.Handshake && sl.Conn == nil {
+		sl.Conn = s.conn
 	}
 
 	return nil
@@ -231,7 +233,7 @@ func parseInputs(buf []byte) ([][]byte, []resp.Value) {
 }
 
 func (s *Session) push(buf []byte, val resp.Value) {
-	if s.repl.Role == MasterReplica {
+	if s.repl.Role == pkg.MasterReplica {
 		cmd, _, err := resp.DecodeCmd(val)
 		if err != nil {
 			fmt.Println("decode cmd: ", err.Error())
@@ -244,7 +246,7 @@ func (s *Session) push(buf []byte, val resp.Value) {
 		s.ack.Add(int64(len(buf)))
 		fmt.Printf("added %d to ack. val=%d, source=%q\n", len(buf), s.ack.Load(), string(buf))
 
-		for _, sl := range s.repl.slaves {
+		for _, sl := range s.repl.GetSlaves() {
 			sl.Push(buf)
 		}
 	}

@@ -1,14 +1,15 @@
-package pkg
+package store
 
 import (
 	"fmt"
+	"github.com/codecrafters-io/redis-starter-go/app/pkg"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
-type StoreTypedValue struct {
+type TypedValue struct {
 	Type string
 	Val  any
 }
@@ -27,22 +28,22 @@ type Stream struct {
 	Entries []StreamEntry
 }
 
-type StoreVal struct {
-	val       *StoreTypedValue
+type Val struct {
+	val       *TypedValue
 	ex        time.Time
 	canExpire bool
 }
 
 type Store struct {
-	store map[string]*StoreVal
+	store map[string]*Val
 	mu    sync.RWMutex
 }
 
-func NewStore() *Store {
-	return &Store{store: make(map[string]*StoreVal)}
+func New() *Store {
+	return &Store{store: make(map[string]*Val)}
 }
 
-func (s *Store) Get(k string) (*StoreTypedValue, bool) {
+func (s *Store) Get(k string) (*TypedValue, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -60,14 +61,14 @@ func (s *Store) SetString(k string, v string, px time.Duration) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.store[k] = &StoreVal{
-		val:       &StoreTypedValue{Type: "string", Val: v},
+	s.store[k] = &Val{
+		val:       &TypedValue{Type: "string", Val: v},
 		ex:        time.Now().Add(px),
 		canExpire: px > 0,
 	}
 }
 
-func (s *Store) SetStream(k string, id string, px time.Duration) (string, error) {
+func (s *Store) SetStream(k string, id string, data map[string]string, px time.Duration) (string, error) {
 	idParts := strings.Split(id, "-")
 	if len(idParts) == 2 {
 		if idParts[0] != "*" && idParts[1] == "*" {
@@ -93,17 +94,17 @@ func (s *Store) SetStream(k string, id string, px time.Duration) (string, error)
 
 	storeVal, ok := s.store[k]
 	if !ok {
-		v := &StoreTypedValue{Type: "stream",
+		v := &TypedValue{Type: "stream",
 			Val: &Stream{
 				Entries: []StreamEntry{
 					{
 						ID:     id,
-						Values: make(map[string]string),
+						Values: data,
 					},
 				},
 			},
 		}
-		s.store[k] = &StoreVal{
+		s.store[k] = &Val{
 			val:       v,
 			ex:        time.Now().Add(px),
 			canExpire: px > 0,
@@ -114,21 +115,58 @@ func (s *Store) SetStream(k string, id string, px time.Duration) (string, error)
 	stream := storeVal.val.Val.(*Stream)
 	stream.Entries = append(stream.Entries, StreamEntry{
 		ID:     id,
-		Values: make(map[string]string),
+		Values: data,
 	})
 	return id, nil
+}
+
+func (s *Store) RangeStream(k, startId, endId string) []StreamEntry {
+	sv, _ := s.Get(k)
+	if sv == nil {
+		return nil
+	}
+
+	skipSequenceCheck := func(id string) bool {
+		return strings.Index(id, "-") < 0
+	}
+	inRange := func(id, start, end string) bool {
+		idMs, idSeq, _ := s.parseStreamId(id)
+		startMs, startSeq, _ := s.parseStreamId(start)
+
+		msPass := idMs >= startMs
+		seqPass := skipSequenceCheck(start) || idSeq >= startSeq
+		startPass := msPass && seqPass
+
+		endMs, endSeq, _ := s.parseStreamId(end)
+		msPass = idMs <= endMs
+		seqPass = skipSequenceCheck(end) || idSeq <= endSeq
+		endPass := msPass && seqPass
+		return startPass && endPass
+	}
+
+	if sv.Type != "stream" {
+		return nil
+	}
+	stream := sv.Val.(*Stream)
+	var res []StreamEntry
+	for _, entry := range stream.Entries {
+		if inRange(entry.ID, startId, endId) {
+			res = append(res, entry)
+		}
+	}
+	return res
 }
 
 func (s *Store) parseStreamId(id string) (int64, int, error) {
 	parts := strings.Split(id, "-")
 	var ms int64
 	var seq int
-	if len(parts) != 2 {
-		return 0, 0, fmt.Errorf("invalid stream id")
-	}
 	ms, err := strconv.ParseInt(parts[0], 10, 64)
 	if err != nil {
 		return 0, 0, err
+	}
+	if len(parts) == 0 {
+		return ms, 0, nil
 	}
 	seq, err = strconv.Atoi(parts[1])
 	if err != nil {
@@ -201,12 +239,17 @@ func (s *Store) Print() string {
 }
 
 func (s *Store) Load(path string) error {
-	d, err := readDDB(path)
+	d, err := pkg.ReadRDB(path)
 	if err != nil {
 		return err
 	}
+
 	for k, v := range d {
-		s.store[k] = &v
+		s.store[k] = &Val{
+			val:       &TypedValue{Type: "string", Val: v.Val.(string)},
+			ex:        v.Expiry,
+			canExpire: !v.Expiry.Equal(time.Time{}),
+		}
 	}
 	return nil
 }

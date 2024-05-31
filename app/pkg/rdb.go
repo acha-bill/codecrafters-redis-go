@@ -15,9 +15,13 @@ import (
 var ErrInvalidHeader = errors.New("invalid header")
 var ErrInvalidVersion = errors.New("invalid version")
 
-type Value struct {
+type rdbValue struct {
 	Kind  StringKind
 	Value any
+}
+type RDBStoreValue struct {
+	Val    any
+	Expiry time.Time
 }
 
 type StringKind int
@@ -29,10 +33,10 @@ const (
 	Int32String
 )
 
-var data map[string]StoreVal
+var data map[string]RDBStoreValue
 
-func readDDB(path string) (map[string]StoreVal, error) {
-	data = make(map[string]StoreVal)
+func ReadRDB(path string) (map[string]RDBStoreValue, error) {
+	data = make(map[string]RDBStoreValue)
 
 	f, err := os.Open(path)
 	if err != nil {
@@ -133,15 +137,14 @@ func readData(r *bufio.Reader, expiry time.Time) error {
 		return err
 	}
 	key, _, err := decode(r)
-	var v Value
+	var v rdbValue
 	err = decodeValue(r, &v)
 	if err != nil {
 		return err
 	}
-	data[string(key)] = StoreVal{
-		val:       &StoreTypedValue{Type: "string", Val: v.Value.(string)},
-		ex:        expiry,
-		canExpire: !expiry.Equal(time.Time{}),
+	data[string(key)] = RDBStoreValue{
+		Val:    v.Value,
+		Expiry: expiry,
 	}
 	return nil
 }
@@ -238,7 +241,7 @@ func readFa(r *bufio.Reader) ([]byte, error) {
 //	return string(b), nil
 //}
 
-func decodeValue(r *bufio.Reader, v *Value) error {
+func decodeValue(r *bufio.Reader, v *rdbValue) error {
 	buf, t, err := decode(r)
 	if err != nil {
 		return err
