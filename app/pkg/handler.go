@@ -74,7 +74,7 @@ func (h *Set) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 	if err != nil {
 		return err
 	}
-	h.store.Set(k, v, o.px)
+	h.store.SetString(k, v, o.px)
 	fmt.Printf("set %s:%s, store=%s\n", k, v, h.store.Print())
 	res <- resp.Ok
 	return nil
@@ -94,7 +94,7 @@ func (h *Get) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 	k := args[1].Val.(string)
 	var r []byte
 	if v, ok := h.store.Get(k); ok {
-		r = resp.Encode(v)
+		r = resp.Encode(v.Val)
 	} else {
 		r = resp.Nil
 	}
@@ -370,11 +370,28 @@ func (h Type) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 		return ErrInvalidCmd
 	}
 	key := args[1].Val.(string)
-	_, ok := h.store.Get(key)
+	v, ok := h.store.Get(key)
 	if ok {
-		res <- resp.EncodeSimple("string")
+		res <- resp.EncodeSimple(v.Type)
 	} else {
 		res <- resp.EncodeSimple("none")
 	}
+	return nil
+}
+
+type Xadd struct {
+	s *Store
+}
+
+func NewXadd(s *Store) Xadd {
+	return Xadd{s: s}
+}
+func (h Xadd) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
+	if len(args) < 5 {
+		return ErrInvalidCmd
+	}
+	k, id := args[1].Val.(string)
+	h.s.SetStream(k, "", 0)
+	res <- resp.Encode(id)
 	return nil
 }

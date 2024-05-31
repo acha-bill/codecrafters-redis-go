@@ -57,6 +57,7 @@ func main() {
 		"CONFIG": pkg.NewConf(config),
 		"KEYS":   pkg.NewKeys(config),
 		"TYPE":   pkg.NewType(store),
+		"XADD":   pkg.NewXadd(store),
 	}
 
 	ack0, ack1 := &atomic.Int64{}, &atomic.Int64{}

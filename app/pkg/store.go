@@ -6,14 +6,15 @@ import (
 	"time"
 )
 
-type StoreVal struct {
-	val       string
-	ex        time.Time
-	canExpire bool
+type StoreTypedValue struct {
+	Type string
+	Val  string
 }
 
-func (s *StoreVal) String() string {
-	return s.val
+type StoreVal struct {
+	val       *StoreTypedValue
+	ex        time.Time
+	canExpire bool
 }
 
 type Store struct {
@@ -25,26 +26,37 @@ func NewStore() *Store {
 	return &Store{store: make(map[string]*StoreVal)}
 }
 
-func (s *Store) Get(k string) (string, bool) {
+func (s *Store) Get(k string) (*StoreTypedValue, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	v, ok := s.store[k]
 	if !ok {
-		return "", false
+		return nil, false
 	}
 	if v.canExpire && time.Now().After(v.ex) {
-		return "", false
+		return nil, false
 	}
 	return v.val, true
 }
 
-func (s *Store) Set(k string, v string, px time.Duration) {
+func (s *Store) SetString(k string, v string, px time.Duration) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.store[k] = &StoreVal{
-		val:       v,
+		val:       &StoreTypedValue{Type: "string", Val: v},
+		ex:        time.Now().Add(px),
+		canExpire: px > 0,
+	}
+}
+
+func (s *Store) SetStream(k string, v string, px time.Duration) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.store[k] = &StoreVal{
+		val:       &StoreTypedValue{Type: "stream", Val: v},
 		ex:        time.Now().Add(px),
 		canExpire: px > 0,
 	}
