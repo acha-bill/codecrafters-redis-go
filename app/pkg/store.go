@@ -152,6 +152,7 @@ func (s *Store) generateSeq(k string, ms int64) int {
 		}
 	}
 
+	fmt.Println("ms", ms, "last sequence", lastSeq, "empty", empty)
 	if ms == 0 {
 		return lastSeq + 1
 	}
