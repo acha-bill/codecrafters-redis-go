@@ -3,10 +3,10 @@ package store
 import (
 	"fmt"
 	"github.com/codecrafters-io/redis-starter-go/app/pkg"
+	"github.com/codecrafters-io/redis-starter-go/app/utils"
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
@@ -39,11 +39,14 @@ type Store struct {
 	store map[string]*Val
 	mu    sync.RWMutex
 
-	xreadBlocked atomic.Bool
+	lastStreamId map[string]string
 }
 
 func New() *Store {
-	return &Store{store: make(map[string]*Val)}
+	return &Store{
+		store:        make(map[string]*Val),
+		lastStreamId: make(map[string]string),
+	}
 }
 
 func (s *Store) Get(k string) (*TypedValue, bool) {
@@ -120,6 +123,7 @@ func (s *Store) SetStream(k string, id string, data map[string]string, px time.D
 		ID:     id,
 		Values: data,
 	})
+	s.lastStreamId[k] = id
 	return id, nil
 }
 
@@ -176,34 +180,64 @@ func (s *Store) ReadStream(req map[string]string, block time.Duration) map[strin
 		}
 		return skipSequenceCheck(start) || idSeq > startSeq
 	}
+	//
+	//if block > 0 {
+	//	s.xreadBlocked.Store(true)
+	//	time.AfterFunc(block, func() {
+	//		s.xreadBlocked.Store(false)
+	//	})
+	//}
+	//
+	//if s.xreadBlocked.Load() {
+	//	return nil
+	//}
 
-	if block > 0 {
-		s.xreadBlocked.Store(true)
-		time.AfterFunc(block, func() {
-			s.xreadBlocked.Store(false)
-		})
-	}
-
-	res := make(map[string][]StreamEntry)
-	for k, startId := range req {
-		sv, _ := s.Get(k)
-		if sv == nil {
-			res[k] = nil
-			continue
-		}
-		if sv.Type != "stream" {
-			return nil
-		}
-		stream := sv.Val.(*Stream)
-		var data []StreamEntry
-		for _, entry := range stream.Entries {
-			if inRange(entry.ID, startId) {
-				data = append(data, entry)
+	readStreams := func() map[string][]StreamEntry {
+		res := make(map[string][]StreamEntry)
+		for k, startId := range req {
+			sv, _ := s.Get(k)
+			if sv == nil {
+				res[k] = nil
+				continue
 			}
+			if sv.Type != "stream" {
+				return nil
+			}
+			stream := sv.Val.(*Stream)
+			var data []StreamEntry
+			for _, entry := range stream.Entries {
+				if inRange(entry.ID, startId) {
+					data = append(data, entry)
+				}
+			}
+			res[k] = data
 		}
-		res[k] = data
+		return res
 	}
-	return res
+
+	res := readStreams()
+
+	if block == 0 {
+		return res
+	}
+
+	lastStreamIds1 := utils.MapCopy(s.lastStreamId)
+	time.Sleep(block)
+	res = readStreams()
+	lastStreamIds2 := utils.MapCopy(s.lastStreamId)
+
+	updated := true
+	for k := range lastStreamIds1 {
+		if lastStreamIds1[k] == lastStreamIds2[k] {
+			updated = false
+			break
+		}
+	}
+	if updated {
+		return res
+	}
+
+	return nil
 }
 
 func (s *Store) parseStreamId(id string) (int64, int, error) {

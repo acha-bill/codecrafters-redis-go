@@ -456,6 +456,11 @@ func (h Xread) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 		d[streams[i].Val.(string)] = indices[i].Val.(string)
 	}
 	r := h.s.ReadStream(d, block)
+
+	if block > 0 && r == nil {
+		res <- resp.Nil
+		return nil
+	}
 	res <- resp.Encode(r)
 	return nil
 }
