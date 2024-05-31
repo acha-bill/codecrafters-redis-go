@@ -3,7 +3,6 @@ package store
 import (
 	"fmt"
 	"github.com/codecrafters-io/redis-starter-go/app/pkg"
-	"github.com/codecrafters-io/redis-starter-go/app/utils"
 	"strconv"
 	"strings"
 	"sync"
@@ -35,17 +34,21 @@ type Val struct {
 	canExpire bool
 }
 
+type streamDetail struct {
+	c int
+	r int
+}
 type Store struct {
 	store map[string]*Val
 	mu    sync.RWMutex
 
-	lastStreamId map[string]string
+	streamDetails map[string]*streamDetail
 }
 
 func New() *Store {
 	return &Store{
-		store:        make(map[string]*Val),
-		lastStreamId: make(map[string]string),
+		store:         make(map[string]*Val),
+		streamDetails: make(map[string]*streamDetail),
 	}
 }
 
@@ -115,7 +118,7 @@ func (s *Store) SetStream(k string, id string, data map[string]string, px time.D
 			ex:        time.Now().Add(px),
 			canExpire: px > 0,
 		}
-		s.lastStreamId[k] = id
+		s.streamDetails[k] = &streamDetail{c: 1}
 		return id, nil
 	}
 
@@ -124,7 +127,7 @@ func (s *Store) SetStream(k string, id string, data map[string]string, px time.D
 		ID:     id,
 		Values: data,
 	})
-	s.lastStreamId[k] = id
+	s.streamDetails[k].c++
 	return id, nil
 }
 
@@ -218,38 +221,43 @@ func (s *Store) ReadStream(req [][]string, block time.Duration) []*ReadStreamRes
 		return res
 	}
 
-	fmt.Println(s.lastStreamId)
-	lastStreamIds1 := utils.MapCopy(s.lastStreamId)
-	fmt.Println(lastStreamIds1)
+	read0 := make(map[string]int)
+	for _, v := range res {
+		read0[v.Stream] = len(v.Entries)
+	}
+
 	updated := func() bool {
-		u := true
-		lastStreamIds2 := utils.MapCopy(s.lastStreamId)
-		for k := range lastStreamIds1 {
-			if lastStreamIds1[k] == lastStreamIds2[k] {
-				u = false
-				break
+		read1 := make(map[string]int)
+		for _, v := range res {
+			read1[v.Stream] = len(v.Entries)
+		}
+		//fmt.Println(read0, read1)
+		for k := range read0 {
+			if read0[k] == read1[k] {
+				return false
 			}
 		}
-		fmt.Println(lastStreamIds2)
-		fmt.Println("updated", u)
-		return u
+		return true
 	}
 
 	if block > 0 {
 		time.Sleep(block)
+		res = s.readStreams(req)
 		if !updated() {
 			return nil
 		}
-		return s.readStreams(req)
+		return res
 	}
 
-	ticker := time.NewTicker(100 * time.Millisecond)
+	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 	for {
-		if updated() {
-			return s.readStreams(req)
-		}
 		<-ticker.C
+		res = s.readStreams(req)
+		if !updated() {
+			continue
+		}
+		return res
 	}
 }
 
