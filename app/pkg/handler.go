@@ -387,10 +387,10 @@ func NewXadd(s *Store) Xadd {
 	return Xadd{s: s}
 }
 func (h Xadd) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
-	if len(args) < 5 {
+	if len(args) < 4 {
 		return ErrInvalidCmd
 	}
-	k, id := args[1].Val.(string)
+	k, id := args[1].Val.(string), args[2].Val.(string)
 	h.s.SetStream(k, "", 0)
 	res <- resp.Encode(id)
 	return nil

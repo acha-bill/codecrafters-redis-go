@@ -155,6 +155,7 @@ func (s *Session) handle(in Input) error {
 
 	err = h.Handle(s.id, args, res)
 	if err != nil {
+		res <- resp.Encode(err.Error())
 		return err
 	}
 
