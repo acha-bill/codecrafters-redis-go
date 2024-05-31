@@ -391,7 +391,7 @@ func (h Xadd) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 		return ErrInvalidCmd
 	}
 	k, id := args[1].Val.(string), args[2].Val.(string)
-	err := h.s.SetStream(k, "", 0)
+	err := h.s.SetStream(k, id, 0)
 	if err != nil {
 		return err
 	}
