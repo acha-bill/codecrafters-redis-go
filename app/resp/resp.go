@@ -125,7 +125,7 @@ func encodeMap(v any) []byte {
 	arr := make([][]any, l)
 	for i, k := range s.MapKeys() {
 		v := s.MapIndex(k)
-		arr[i] = []any{k, v}
+		arr[i] = []any{k.Interface(), v.Interface()}
 	}
 	return encodeArray(arr)
 }

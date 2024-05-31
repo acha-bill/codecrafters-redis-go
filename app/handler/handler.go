@@ -435,7 +435,7 @@ func (h Xread) Handle(sId int64, args []resp.Value, res chan<- []byte) error {
 	if len(args) < 4 {
 		return ErrInvalidCmd
 	}
-	k, startId := args[1].Val.(string), args[2].Val.(string)
+	k, startId := args[2].Val.(string), args[3].Val.(string)
 	r := h.s.ReadStream(k, startId)
 	res <- resp.Encode(r)
 	return nil

@@ -176,7 +176,7 @@ func (s *Store) ReadStream(k, startId string) map[string][]StreamEntry {
 		if idMs < startMs {
 			return false
 		}
-		return !skipSequenceCheck(start) || idSeq > startSeq
+		return skipSequenceCheck(start) || idSeq > startSeq
 	}
 	if sv.Type != "stream" {
 		return nil
