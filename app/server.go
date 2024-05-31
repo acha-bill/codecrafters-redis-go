@@ -62,6 +62,7 @@ func main() {
 		"TYPE":   handler.NewType(store),
 		"XADD":   handler.NewXadd(store),
 		"XRANGE": handler.NewXrange(store),
+		"XREAD":  handler.NewXread(store),
 	}
 
 	ack0, ack1 := &atomic.Int64{}, &atomic.Int64{}
