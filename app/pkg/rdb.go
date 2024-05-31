@@ -139,7 +139,7 @@ func readData(r *bufio.Reader, expiry time.Time) error {
 		return err
 	}
 	data[string(key)] = StoreVal{
-		val:       v.Value.(string),
+		val:       &StoreTypedValue{Type: "string", Val: v.Value.(string)},
 		ex:        expiry,
 		canExpire: !expiry.Equal(time.Time{}),
 	}
