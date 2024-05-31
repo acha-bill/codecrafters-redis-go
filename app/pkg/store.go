@@ -142,9 +142,11 @@ func (s *Store) generateSeq(k string, ms int) int {
 		return 1
 	}
 	var lastSeq int
+	empty := true
 	for _, e := range sv.Val.(*Stream).Entries {
 		entryMs, _, _ := s.parseStreamId(e.ID)
 		if entryMs == ms {
+			empty = false
 			_, lastSeq, _ = s.parseStreamId(e.ID)
 		}
 	}
@@ -152,8 +154,9 @@ func (s *Store) generateSeq(k string, ms int) int {
 	if ms == 0 {
 		return lastSeq + 1
 	}
-	if lastSeq == 0 {
-		return 1
+
+	if lastSeq == 0 && empty {
+		return 0
 	}
 	return lastSeq + 1
 }
